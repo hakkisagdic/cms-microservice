@@ -17,6 +17,108 @@ services:
     networks:
       - cms_network_dev
 
+  # Identity Service
+  identityservice:
+    build:
+      context: .
+      dockerfile: docker/IdentityService.Dockerfile
+    container_name: cms_identityservice_dev
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=IdentityServiceDb;Username=postgres;Password=postgres
+      - JwtSettings__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForDevelopment
+      - JwtSettings__Issuer=CMS-ApiGateway
+      - JwtSettings__Audience=CMS-Services
+      - JwtSettings__ExpiryMinutes=60
+    ports:
+      - "5128:5128"
+    depends_on:
+      - postgres
+    networks:
+      - cms_network_dev
+    restart: unless-stopped
+    volumes:
+      - ./src/IdentityService:/src
+      - app_dev_logs:/app/logs
+
+  # User Service
+  userservice:
+    build:
+      context: .
+      dockerfile: docker/UserService.Dockerfile
+    container_name: cms_userservice_dev
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=UserServiceDb;Username=postgres;Password=postgres
+      - JwtSettings__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForDevelopment
+      - JwtSettings__Issuer=CMS-ApiGateway
+      - JwtSettings__Audience=CMS-Services
+      - JwtSettings__ExpiryMinutes=60
+    ports:
+      - "5001:5001"
+    depends_on:
+      - postgres
+    networks:
+      - cms_network_dev
+    restart: unless-stopped
+    volumes:
+      - ./src/UserService:/src
+      - app_dev_logs:/app/logs
+
+  # Content Service
+  contentservice:
+    build:
+      context: .
+      dockerfile: docker/ContentService.Dockerfile
+    container_name: cms_contentservice_dev
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=ContentServiceDb;Username=postgres;Password=postgres
+      - Services__UserService__BaseUrl=http://userservice:5001
+      - JwtSettings__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForDevelopment
+      - JwtSettings__Issuer=CMS-ApiGateway
+      - JwtSettings__Audience=CMS-Services
+      - JwtSettings__ExpiryMinutes=60
+    ports:
+      - "5002:5002"
+    depends_on:
+      - postgres
+      - userservice
+    networks:
+      - cms_network_dev
+    restart: unless-stopped
+    volumes:
+      - ./src/ContentService:/src
+      - app_dev_logs:/app/logs
+
+  # API Gateway
+  apigateway:
+    build:
+      context: .
+      dockerfile: docker/ApiGateway.Dockerfile
+    container_name: cms_apigateway_dev
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ServiceUrls__IdentityService=http://identityservice:5128
+      - ServiceUrls__UserService=http://userservice:5001
+      - ServiceUrls__ContentService=http://contentservice:5002
+      - JwtSettings__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForDevelopment
+      - JwtSettings__Issuer=CMS-ApiGateway
+      - JwtSettings__Audience=CMS-Services
+      - JwtSettings__ExpiryMinutes=60
+    ports:
+      - "5000:5000"
+    depends_on:
+      - identityservice
+      - userservice
+      - contentservice
+    networks:
+      - cms_network_dev
+    restart: unless-stopped
+    volumes:
+      - ./src/ApiGateway:/src
+      - app_dev_logs:/app/logs
+
   # pgAdmin for development
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -40,3 +142,4 @@ networks:
 volumes:
   postgres_dev_data:
   pgadmin_dev_data:
+  app_dev_logs:

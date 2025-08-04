@@ -1,42 +1,28 @@
 using Serilog;
-using Serilog.Enrichers.CorrelationId;
-using Serilog.Context;
-using Yarp.ReverseProxy;
-using AspNetCoreRateLimit;
 using Microsoft.OpenApi.Models;
-using Polly;
-using Polly.Extensions.Http;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+
+// Constants
+const string ApplicationJson = "application/json";
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog from appsettings.json
+// Configure Serilog
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.WithCorrelationId()
-    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("logs/apigateway-.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
-// Add Serilog
 builder.Host.UseSerilog();
 
-// Add services to the container
+// Add services
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
-// Add Rate Limiting
-builder.Services.AddMemoryCache();
-builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
-builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
-builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
-builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
-builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+builder.Services.AddHttpClient();
 
-// Add HTTP Client with Polly for Circuit Breaker
-builder.Services.AddHttpClient("resilient")
-    .AddPolicyHandler(GetRetryPolicy())
-    .AddPolicyHandler(GetCircuitBreakerPolicy());
-
-// Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -47,10 +33,47 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add health checks
 builder.Services.AddHealthChecks();
 
-// Add Swagger for API documentation with microservices aggregation
+// Add JWT Authentication
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is required");
+var keyId = jwtSettings["KeyId"] ?? "cms-key-1";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.ASCII.GetBytes(secretKey)) { KeyId = keyId },
+            ClockSkew = TimeSpan.Zero
+        };
+        
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Log.Warning("JWT Authentication failed: {Error}", context.Exception.Message);
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                Log.Information("JWT Token validated for user: {UserId}", 
+                    context.Principal?.FindFirst("sub")?.Value ?? "Unknown");
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -60,22 +83,85 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "Centralized API Gateway for CMS Microservices"
     });
+    
+    // Add JWT Authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+    
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// Security headers
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    
+    // Remove server header for security
+    context.Response.Headers.Remove("Server");
+    
+    await next();
+});
+
+// Global exception handling
+app.UseExceptionHandler(exceptionHandlerApp =>
+{
+    exceptionHandlerApp.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = ApplicationJson;
+        
+        var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+        var exception = exceptionHandlerPathFeature?.Error;
+        
+        Log.Error(exception, "Unhandled exception occurred");
+        
+        var response = new
+        {
+            Error = "An internal server error occurred",
+            Time = DateTime.UtcNow,
+            TraceId = context.TraceIdentifier
+        };
+        
+        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response));
+    });
+});
+
+// Configure pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        // Add microservices Swagger endpoints via proxy (to avoid CORS issues)
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "CMS API Gateway v1");
-        c.SwaggerEndpoint("/proxy/userservice/swagger/v1/swagger.json", "User Service v1");
-        c.SwaggerEndpoint("/proxy/contentservice/swagger/v1/swagger.json", "Content Service v1");
+        c.SwaggerEndpoint("/proxy/identity/swagger.json", "Identity Service v1");
+        c.SwaggerEndpoint("/proxy/users/swagger.json", "User Service v1");
+        c.SwaggerEndpoint("/proxy/contents/swagger.json", "Content Service v1");
         
-        c.RoutePrefix = string.Empty; // Swagger UI at root
+        c.RoutePrefix = string.Empty;
         c.DisplayRequestDuration();
         c.EnableTryItOutByDefault();
     });
@@ -83,126 +169,127 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 
-// Add Rate Limiting
-app.UseIpRateLimiting();
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
-// Advanced logging middleware with request/response details
+// Simple request logging
 app.Use(async (context, next) =>
 {
-    var correlationId = context.TraceIdentifier;
-    using (LogContext.PushProperty("CorrelationId", correlationId))
-    {
-        var startTime = DateTime.UtcNow;
-        
-        Log.Information("Request started: {Method} {Path} {QueryString}", 
-            context.Request.Method, 
-            context.Request.Path, 
-            context.Request.QueryString);
-
-        // Log request headers in development
-        if (app.Environment.IsDevelopment())
-        {
-            foreach (var header in context.Request.Headers)
-            {
-                Log.Debug("Request Header: {HeaderName} = {HeaderValue}", header.Key, string.Join(", ", header.Value.ToArray()));
-            }
-        }
-
-        await next();
-
-        var duration = DateTime.UtcNow - startTime;
-        Log.Information("Request completed: {Method} {Path} {StatusCode} in {Duration}ms", 
-            context.Request.Method, 
-            context.Request.Path, 
-            context.Response.StatusCode, 
-            duration.TotalMilliseconds);
-    }
+    var startTime = DateTime.UtcNow;
+    Log.Information("Request: {Method} {Path}", context.Request.Method, context.Request.Path);
+    
+    await next();
+    
+    var duration = DateTime.UtcNow - startTime;
+    Log.Information("Response: {StatusCode} in {Duration}ms", context.Response.StatusCode, duration.TotalMilliseconds);
 });
 
-// Health check endpoint
 app.MapHealthChecks("/health");
 
-// Add a simple status endpoint
-app.MapGet("/status", () => new { Status = "API Gateway is running", Timestamp = DateTime.UtcNow })
+app.MapGet("/status", () => new { Status = "Running", Time = DateTime.UtcNow })
     .WithName("GetStatus")
     .WithOpenApi();
 
-// Add API Gateway info endpoint
-app.MapGet("/gateway/info", () => new { 
-    Gateway = "CMS API Gateway",
-    Version = "1.0.0",
-    Features = new[] {
-        "Rate Limiting",
-        "Circuit Breaker", 
-        "Request Logging",
-        "Health Checks",
-        "Swagger Aggregation"
-    },
-    Uptime = DateTime.UtcNow,
-    Services = new {
-        UserService = "http://localhost:5001",
-        ContentService = "http://localhost:5002"
-    }
+// JWT validation test endpoint (only in development)
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/jwt-test", (HttpContext context) =>
+    {
+        var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+        
+        if (authHeader == null || !authHeader.StartsWith("Bearer "))
+        {
+            return Results.BadRequest(new { Error = "No Bearer token provided", Time = DateTime.UtcNow });
+        }
+        
+        var token = authHeader.Substring("Bearer ".Length);
+        
+        return Results.Ok(new 
+        { 
+            Message = "Token received successfully", 
+            TokenLength = token.Length,
+            TokenPreview = token.Substring(0, Math.Min(50, token.Length)) + "...",
+            Time = DateTime.UtcNow
+        });
+    })
+    .WithName("JwtTest")
+    .WithOpenApi()
+    .WithTags("Development");
+}
+
+// Protected endpoint for testing JWT
+app.MapGet("/protected", (HttpContext context) =>
+{
+    var user = context.User;
+    var userId = user.FindFirst("sub")?.Value ?? user.FindFirst("id")?.Value;
+    var email = user.FindFirst("email")?.Value;
+    
+    return Results.Ok(new 
+    { 
+        Message = "Access granted! This is a protected endpoint.",
+        UserId = userId,
+        Email = email,
+        Claims = user.Claims.Select(c => new { c.Type, c.Value }).ToList(),
+        Time = DateTime.UtcNow
+    });
 })
-.WithName("GetGatewayInfo")
+.RequireAuthorization()
+.WithName("GetProtected")
 .WithOpenApi();
 
-// Configure YARP
-app.MapReverseProxy();
-
-// Add Swagger proxy endpoints to avoid CORS issues
-app.MapGet("/proxy/userservice/swagger/v1/swagger.json", async (HttpClient httpClient, IConfiguration config) =>
+// Swagger proxy endpoints
+app.MapGet("/proxy/identity/swagger.json", async (HttpClient httpClient, IConfiguration configuration) =>
 {
     try
     {
-        var userServiceUrl = config["ServiceUrls:UserService"] ?? "http://localhost:5001";
+        var identityServiceUrl = configuration["ServiceUrls:IdentityService"];
+        var response = await httpClient.GetStringAsync($"{identityServiceUrl}/swagger/v1/swagger.json");
+        return Results.Content(response, "application/json");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Failed to fetch Identity Service swagger");
+        return Results.Problem("Identity Service not available");
+    }
+})
+.ExcludeFromDescription();
+
+app.MapGet("/proxy/users/swagger.json", async (HttpClient httpClient, IConfiguration configuration) =>
+{
+    try
+    {
+        var userServiceUrl = configuration["ServiceUrls:UserService"];
         var response = await httpClient.GetStringAsync($"{userServiceUrl}/swagger/v1/swagger.json");
         return Results.Content(response, "application/json");
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Failed to fetch UserService swagger");
-        return Results.Problem("Failed to fetch UserService swagger");
+        Log.Error(ex, "Failed to fetch User Service swagger");
+        return Results.Problem("User Service not available");
     }
-});
+})
+.ExcludeFromDescription();
 
-app.MapGet("/proxy/contentservice/swagger/v1/swagger.json", async (HttpClient httpClient, IConfiguration config) =>
+app.MapGet("/proxy/contents/swagger.json", async (HttpClient httpClient, IConfiguration configuration) =>
 {
     try
     {
-        var contentServiceUrl = config["ServiceUrls:ContentService"] ?? "http://localhost:5002";
+        var contentServiceUrl = configuration["ServiceUrls:ContentService"];
         var response = await httpClient.GetStringAsync($"{contentServiceUrl}/swagger/v1/swagger.json");
         return Results.Content(response, "application/json");
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Failed to fetch ContentService swagger");
-        return Results.Problem("Failed to fetch ContentService swagger");
+        Log.Error(ex, "Failed to fetch Content Service swagger");
+        return Results.Problem("Content Service not available");
     }
-});
+})
+.ExcludeFromDescription();
 
-Log.Information("Starting API Gateway on port 5000");
+// Configure YARP reverse proxy
+app.MapReverseProxy();
 
-// Policy functions for Circuit Breaker and Retry
-static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
-{
-    return Policy
-        .HandleResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
-        .RetryAsync(3, onRetry: (outcome, retryNumber, context) =>
-        {
-            Log.Warning("Retry {RetryNumber} for {Context}", retryNumber, context.OperationKey);
-        });
-}
-
-static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
-{
-    return Policy
-        .HandleResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
-        .CircuitBreakerAsync(
-            handledEventsAllowedBeforeBreaking: 5,
-            durationOfBreak: TimeSpan.FromSeconds(30),
-            onBreak: (ex, duration) => Log.Error("Circuit breaker opened for {Duration}s", duration.TotalSeconds),
-            onReset: () => Log.Information("Circuit breaker reset"));
-}
+Log.Information("Starting CMS API Gateway...");
 
 await app.RunAsync();

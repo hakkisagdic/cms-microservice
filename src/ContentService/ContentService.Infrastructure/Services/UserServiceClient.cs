@@ -1,5 +1,7 @@
 using System.Text.Json;
+using ContentService.Core.DTOs;
 using ContentService.Core.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace ContentService.Infrastructure.Services;
@@ -8,18 +10,31 @@ public class UserServiceClient : IUserServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<UserServiceClient> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public UserServiceClient(HttpClient httpClient, ILogger<UserServiceClient> logger)
+    public UserServiceClient(HttpClient httpClient, ILogger<UserServiceClient> logger, IHttpContextAccessor httpContextAccessor)
     {
         _httpClient = httpClient;
         _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    private void SetAuthorizationHeader()
+    {
+        var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"];
+        if (!string.IsNullOrEmpty(authHeader))
+        {
+            _httpClient.DefaultRequestHeaders.Remove("Authorization");
+            _httpClient.DefaultRequestHeaders.Add("Authorization", authHeader.ToString());
+        }
     }
 
     public async Task<UserDto?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.GetAsync($"api/users/{userId}", cancellationToken);
+            SetAuthorizationHeader();
+            var response = await _httpClient.GetAsync($"api/Users/{userId}", cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -50,7 +65,8 @@ public class UserServiceClient : IUserServiceClient
     {
         try
         {
-            var response = await _httpClient.GetAsync($"api/users/{userId}", cancellationToken);
+            SetAuthorizationHeader();
+            var response = await _httpClient.GetAsync($"api/Users/{userId}", cancellationToken);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)

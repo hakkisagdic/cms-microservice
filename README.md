@@ -7,137 +7,317 @@ Bu proje, modern .NET 8 teknolojileri kullanılarak geliştirilmiş bir İçerik
 Proje, aşağıdaki bileşenlerden oluşmaktadır:
 
 ### 1. API Gateway
-- **Port**: 5003 (development), 5000 (production/docker)
+- **Port**: 5000
 - **Teknoloji**: YARP (Yet Another Reverse Proxy) 2.3.0
 - **Sorumluluklar**:
   - Tüm istek trafiğini yönetme ve yönlendirme
   - Mikroservisler arasında geçiş (routing)
-  - **Rate Limiting**: IP-tabanlı hız sınırlama (dakikada 100, saatte 1000 istek)
-  - **Circuit Breaker**: Polly ile hata toleransı ve otomatik iyileşme
-  - **Advanced Logging**: Korelasyon ID'leri ile yapılandırılmış loglama
-  - **Swagger Aggregation**: Tüm mikroservislerin dökümantasyonunu tek yerde toplama
-  - **CORS Proxy**: Mikroservis Swagger JSON'larını CORS sorunları olmadan sunma
-  - **Health Checks**: Kapsamlı sistem sağlık kontrolü
-  - **Request/Response Monitoring**: Detaylı performans izleme
-  - **Resilience Patterns**: Retry, timeout ve circuit breaker patterns
+  - JWT Authentication ve Authorization
+  - Rate Limiting: IP-tabanlı hız sınırlama (dakikada 100, saatte 1000 istek)
+  - Swagger Aggregation: Tüm mikroservislerin dökümantasyonunu tek yerde toplama
+  - Health Checks: Kapsamlı sistem sağlık kontrolü
+  - CORS yapılandırması
+  - Security headers
 
-### 2. User Service (Kullanıcı Servisi)
+### 2. Identity Service (Kimlik Doğrulama Servisi)
+- **Port**: 5128
+- **Veritabanı**: IdentityServiceDb (PostgreSQL) / In-Memory fallback
+- **Sorumluluklar**:
+  - Kullanıcı kayıt ve giriş işlemleri
+  - JWT token oluşturma ve doğrulama
+  - Refresh token yönetimi
+  - Kullanıcı kimlik bilgileri saklama
+  - Role-based authentication
+  - Şifre güvenlik politikaları
+
+### 3. User Service (Kullanıcı Servisi)
 - **Port**: 5001
 - **Veritabanı**: UserServiceDb (PostgreSQL) / In-Memory fallback
 - **Sorumluluklar**:
-  - Kullanıcı oluşturma, güncelleme, silme ve listeleme
+  - Kullanıcı profil yönetimi
   - Kullanıcı bilgilerini detaylı olarak alma
   - Kullanıcı durumu yönetimi (Active, Inactive, Suspended, Pending)
   - Email uniqueness validation
-  - Comprehensive input validation with FluentValidation
+  - JWT Authorization ile korumalı endpointler
 
-### 3. Content Service (İçerik Servisi)
+### 4. Content Service (İçerik Servisi)
 - **Port**: 5002
 - **Veritabanı**: ContentServiceDb (PostgreSQL) / In-Memory fallback
 - **Sorumluluklar**:
   - İçerik oluşturma, güncelleme, silme ve listeleme
   - İçerik yayınlama ve durumu yönetimi
-  - İçerik arama ve filtreleme
-  - User Service ile entegrasyon
+  - Author validation (User Service ile entegrasyon)
   - SEO-friendly slug generation
+  - İçerik kategorilendirme ve etiketleme
+  - JWT Authorization ile korumalı endpointler
 
 ## 🛠️ Teknoloji Stack
 
-- **.NET 9**: Modern C# özellikleri ve performans iyileştirmeleri
-- **ASP.NET Core 9**: Web API framework
+- **.NET 8 LTS**: Modern C# özellikleri ve performans iyileştirmeleri
+- **ASP.NET Core 8**: Web API framework
 - **YARP 2.3.0**: .NET için hafif, yüksek performanslı reverse proxy
-- **AspNetCoreRateLimit**: IP-tabanlı hız sınırlama ve throttling
-- **Polly**: Circuit breaker, retry patterns ve resilience
-- **Serilog**: Yapılandırılmış loglama, korelasyon trackingve gelişmiş log enrichment
+- **JWT Bearer Authentication**: JSON Web Token tabanlı kimlik doğrulama
+- **ASP.NET Core Identity**: Kullanıcı kimlik yönetimi
+- **Serilog**: Yapılandırılmış loglama ve dosya tabanlı log yönetimi
 - **PostgreSQL**: Güçlü ve güvenilir ilişkisel veritabanı
-- **Smart Database Selection**: Otomatik PostgreSQL/In-Memory veritabanı seçimi
-- **Intelligent Connection Testing**: Başlangıçta sessiz bağlantı testleri
-- **Graceful Database Fallback**: PostgreSQL'den in-memory'ye sorunsuz geçiş
-- **Entity Framework Core 9**: ORM ve veritabanı yönetimi
-- **MediatR**: CQRS pattern implementation with pipeline behaviors
-- **FluentValidation**: Comprehensive model validation with pipeline integration
-- **ValidationBehavior**: Automatic request validation pipeline
-- **Swagger/OpenAPI**: API documentation with cross-service aggregation
-- **Docker & Docker Compose**: Full containerization with multi-stage builds
-- **Health Checks**: Comprehensive service monitoring
-- **xUnit**: Unit testing framework (192 tests with 100% success rate)
-- **Moq**: Mocking framework
-- **FluentAssertions**: Test assertions
+- **Entity Framework Core 8**: ORM ve veritabanı yönetimi
+- **MediatR**: CQRS pattern implementation
+- **FluentValidation**: Model validation
+- **Swagger/OpenAPI**: API documentation
+- **Docker & Docker Compose**: Containerization
+- **Health Checks**: Service monitoring
+- **In-Memory Database**: Development ve test ortamları için fallback
 
-## 🎯 API Gateway Gelişmiş Özellikleri
+## 🚀 Hızlı Başlangıç
 
-### Rate Limiting & Throttling
-```json
-{
-  "IpRateLimiting": {
-    "EnableEndpointRateLimiting": true,
-    "StackBlockedRequests": false,
-    "RealIpHeader": "X-Real-IP",
-    "HttpStatusCode": 429,
-    "GeneralRules": [
-      {
-        "Endpoint": "*",
-        "Period": "1m",
-        "Limit": 100
-      },
-      {
-        "Endpoint": "*",
-        "Period": "1h", 
-        "Limit": 1000
-      }
-    ]
-  }
-}
+### Ön Gereksinimler
+- .NET 8 SDK
+- PostgreSQL (opsiyonel - in-memory fallback mevcut)
+- Docker ve Docker Compose (opsiyonel)
+
+### Script ile Başlatma
+```bash
+# Tüm servisleri ayrı terminallerde başlat
+./scripts/start.sh
+
+# Sistem testini çalıştır
+./scripts/test.sh
+
+# Tüm servisleri durdur
+./scripts/stop.sh
 ```
-**Özellikler:**
-- IP-tabanlı hız sınırlama
-- Endpoint-specific limitler
-- Sliding window algorithm
-- Custom HTTP status codes
-- Real-time monitoring
 
-### Circuit Breaker Pattern
-```csharp
-// Polly ile circuit breaker configuration
-CircuitBreakerPolicy
-    .HandleResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
-    .CircuitBreakerAsync(
-        handledEventsAllowedBeforeBreaking: 5,
-        durationOfBreak: TimeSpan.FromSeconds(30)
-    );
+### Manuel Başlatma
+```bash
+# 1. Identity Service
+cd src/IdentityService/IdentityService.API
+dotnet run --urls="http://localhost:5128"
+
+# 2. User Service
+cd src/UserService/UserService.API
+dotnet run --urls="http://localhost:5001"
+
+# 3. Content Service
+cd src/ContentService/ContentService.API
+dotnet run --urls="http://localhost:5002"
+
+# 4. API Gateway
+cd src/ApiGateway
+dotnet run --urls="http://localhost:5000"
 ```
-**Özellikler:**
-- 5 başarısız istekten sonra devreye girer
-- 30 saniye break süresi
-- Otomatik recovery
-- Detailed logging ve monitoring
 
-### Advanced Logging & Monitoring
-```csharp
-// Correlation ID ile request tracking
-Log.Information("Request {CorrelationId}: {Method} {Path} completed in {Duration}ms",
-    correlationId, method, path, duration);
+### Docker ile Başlatma
+```bash
+# Production ortamı için tüm servisleri başlat
+docker-compose up -d
+
+# Development ortamı için başlat
+docker-compose -f docker-compose.dev.yml up -d
+
+# Specific service başlat
+docker-compose up -d postgres identityservice
+
+# Build ve başlat (değişiklikler sonrası)
+docker-compose up -d --build
+
+# Logları izle
+docker-compose logs -f
+
+# Specific service logları
+docker-compose logs -f apigateway
+
+# Servisleri durdur
+docker-compose down
+
+# Tüm volume'ları da sil
+docker-compose down -v
 ```
-**Özellikler:**
-- Correlation ID tracking
-- Request/response duration monitoring
-- Structured logging with Serilog
-- Development mode'da header logging
-- Production-ready log formatting
 
-### Swagger Aggregation
-**CORS Proxy Çözümü:**
-- `/proxy/userservice/swagger/v1/swagger.json`
-- `/proxy/contentservice/swagger/v1/swagger.json`
-- Cross-origin requests için proxy endpoints
-- Tek sayfada tüm mikroservis API'leri
-- Real-time API testing capability
+## 📋 API Endpoints
+
+### API Gateway (http://localhost:5000)
+- **Swagger**: `/swagger`
+- **Health Check**: `/status`
+- **JWT Test**: `/jwt-test`
+- **Protected Test**: `/protected`
+
+### Identity Service Endpoints (via Gateway)
+- **Register**: `POST /api/auth/register`
+- **Login**: `POST /api/auth/login`
+- **Public Test**: `GET /api/test/public`
+- **Protected Test**: `GET /api/test/protected`
+
+### User Service Endpoints (via Gateway)
+- **Get All Users**: `GET /api/users`
+- **Get User by ID**: `GET /api/users/{id}`
+- **Create User**: `POST /api/users`
+- **Update User**: `PUT /api/users/{id}`
+- **Delete User**: `DELETE /api/users/{id}`
+
+### Content Service Endpoints (via Gateway)
+- **Get All Contents**: `GET /api/contents`
+- **Get Content by ID**: `GET /api/contents/{id}`
+- **Create Content**: `POST /api/contents`
+- **Update Content**: `PUT /api/contents/{id}`
+- **Delete Content**: `DELETE /api/contents/{id}`
+- **Publish Content**: `POST /api/contents/{id}/publish`
+
+## 🔐 Kimlik Doğrulama
+
+### JWT Authentication Flow
+1. **Kayıt**: `POST /api/auth/register`
+2. **Giriş**: `POST /api/auth/login` - JWT token döner
+3. **API Kullanımı**: `Authorization: Bearer {token}` header'ı ile
+
+### Örnek Authentication
+```bash
+# Kullanıcı kayıt
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@cms.com",
+    "password": "Admin123!",
+    "confirmPassword": "Admin123!",
+    "firstName": "Admin",
+    "lastName": "User"
+  }'
+
+# Giriş yapma
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@cms.com",
+    "password": "Admin123!"
+  }'
+
+# Token ile API kullanımı
+curl -H "Authorization: Bearer {token}" \
+  http://localhost:5000/api/users
+```
 
 ## 🎯 Tasarım Desenleri ve Prensipler
 
 ### Clean Architecture
 - **Core Layer**: Domain entities, interfaces, DTOs
 - **Infrastructure Layer**: Data access, external services
+- **API Layer**: Controllers, middlewares, configuration
+
+### Repository Pattern
+- Generic repository implementations
+- Dependency injection
+- Testable data access layer
+
+## 🔧 Konfigürasyon
+
+### JWT Konfigürasyonu
+```json
+{
+  "JwtSettings": {
+    "Key": "YourSuperSecretKeyThatIsAtLeast32CharactersLong",
+    "Issuer": "CMS-ApiGateway",
+    "Audience": "CMS-Services",
+    "ExpiryMinutes": 60
+  }
+}
+```
+
+### Database Konfigürasyonu
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Database=CmsDb;Username=postgres;Password=yourpassword"
+  }
+}
+```
+
+## 📊 Monitoring ve Health Checks
+
+### Health Check Endpoints
+- **API Gateway**: `http://localhost:5000/status`
+- **Identity Service**: `http://localhost:5128/health`
+- **User Service**: `http://localhost:5001/health`
+- **Content Service**: `http://localhost:5002/health`
+
+### Logging
+Tüm servisler Serilog ile yapılandırılmış logging kullanır:
+- Console output (development)
+- File logging (production)
+- Structured logging format
+- Error tracking ve monitoring
+
+## 🚀 Deployment
+
+### Docker Compose ile Production Deployment
+```bash
+# Production deployment
+docker-compose up -d
+
+# Health check
+curl http://localhost:5000/status
+curl http://localhost:5128/health
+curl http://localhost:5001/health
+curl http://localhost:5002/health
+
+# Logları kontrol et
+docker-compose logs -f apigateway
+```
+
+### Manuel Production Deployment
+```bash
+# 1. Tüm servisleri build et
+dotnet publish src/IdentityService/IdentityService.API -c Release -o deploy/identity
+dotnet publish src/UserService/UserService.API -c Release -o deploy/user
+dotnet publish src/ContentService/ContentService.API -c Release -o deploy/content
+dotnet publish src/ApiGateway -c Release -o deploy/gateway
+
+# 2. Production ortam değişkenleri
+export ASPNETCORE_ENVIRONMENT=Production
+export JWT_KEY=YourProductionSecretKey
+export CONNECTION_STRING=YourProductionConnectionString
+
+# 3. Servisleri başlat (reverse proxy arkasında)
+systemctl start cms-identity
+systemctl start cms-user
+systemctl start cms-content
+systemctl start cms-gateway
+```
+
+### Kubernetes Deployment (Opsiyonel)
+```bash
+# Kubernetes manifests oluştur
+kubectl create namespace cms-microservice
+kubectl apply -f k8s/
+kubectl get pods -n cms-microservice
+```
+
+## 🧪 Testing
+
+### Unit Tests
+```bash
+# Tüm testleri çalıştır
+dotnet test
+
+# Coverage raporu
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+### API Testing
+API Gateway üzerinden tüm servislere erişim mümkündür:
+- Swagger UI: `http://localhost:5000/swagger`
+- Postman koleksiyonu mevcut
+- Manuel test komutları README'de
+
+## 🤝 Katkıda Bulunma
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 Lisans
+
+Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosyasına bakınız.
 - **API Layer**: Controllers, middleware, configuration
 
 ### CQRS (Command Query Responsibility Segregation)

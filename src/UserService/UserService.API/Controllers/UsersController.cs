@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using UserService.Core.DTOs;
 using UserService.Core.Features.Users.Commands;
 using UserService.Core.Features.Users.Queries;
@@ -9,6 +10,7 @@ namespace UserService.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[Authorize] // JWT Authentication required for all endpoints
 public class UsersController : ControllerBase
 {
     private readonly IMediator _mediator;

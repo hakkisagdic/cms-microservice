@@ -6,6 +6,9 @@ using UserService.Core.DTOs;
 using UserService.Core.Features.Users.Queries;
 using UserService.Core.Validators;
 using UserService.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,12 +68,57 @@ builder.Services.AddCors(options =>
 // Add Health Checks
 builder.Services.AddHealthChecks();
 
+// Add JWT Authentication
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is required");
+var keyId = jwtSettings["KeyId"] ?? "cms-key-1";
+
+Console.WriteLine($"User Service JWT Settings - KeyId: {keyId}, Secret Length: {secretKey.Length}, Issuer: {jwtSettings["Issuer"]}, Audience: {jwtSettings["Audience"]}");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.ASCII.GetBytes(secretKey)) { KeyId = keyId },
+            ClockSkew = TimeSpan.Zero
+        };
+        
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Log.Warning("JWT Authentication failed in UserService: {Error}", context.Exception.Message);
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
+    app.UseSwagger(c =>
+    {
+        c.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
+        {
+            // Add CORS headers to swagger.json response
+            if (!httpReq.HttpContext.Response.Headers.ContainsKey("Access-Control-Allow-Origin"))
+            {
+                httpReq.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+            }
+        });
+    });
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "User Service API V1");
@@ -80,6 +128,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
@@ -93,9 +142,7 @@ using (var scope = app.Services.CreateScope())
     if (context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
     {
         await context.Database.EnsureCreatedAsync();
-        // Log message already handled in DependencyInjection.cs
     }
-    // PostgreSQL logging handled in DependencyInjection.cs
 }
 
 try

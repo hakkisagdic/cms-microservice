@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using ContentService.Core.DTOs;
 using ContentService.Core.Features.Contents.Commands;
 using ContentService.Core.Features.Contents.Queries;
@@ -9,6 +10,7 @@ namespace ContentService.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[Authorize] // JWT Authentication required for all endpoints
 public class ContentsController : ControllerBase
 {
     private readonly IMediator _mediator;
