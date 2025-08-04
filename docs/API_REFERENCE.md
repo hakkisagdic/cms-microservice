@@ -4,16 +4,18 @@ Bu dokümant, CMS Mikroservis API'lerinin detaylı kullanım kılavuzudur.
 
 ## 📋 İçindekiler
 1. [Genel Bilgiler](#genel-bilgiler)
-2. [User Service API](#user-service-api)
-3. [Content Service API](#content-service-api)
-4. [Hata Kodları](#hata-kodları)
-5. [Örnek Kullanım Senaryoları](#örnek-kullanım-senaryoları)
+2. [API Gateway](#api-gateway)
+3. [User Service API](#user-service-api)
+4. [Content Service API](#content-service-api)
+5. [Hata Kodları](#hata-kodları)
+6. [Örnek Kullanım Senaryoları](#örnek-kullanım-senaryoları)
 
 ## 🌐 Genel Bilgiler
 
 ### Base URLs
-- **User Service**: `http://localhost:5001` (Development)
-- **Content Service**: `http://localhost:5002` (Development)
+- **API Gateway**: `http://localhost:5000` (Development)
+- **User Service**: `http://localhost:5001` (Direct Access - Development)
+- **Content Service**: `http://localhost:5002` (Direct Access - Development)
 
 ### Content Type
 Tüm API istekleri ve yanıtları `application/json` formatındadır.
@@ -27,11 +29,134 @@ Tüm API responses standart Result pattern kullanır:
 ```json
 {
   "isSuccess": true,
-  "value": { ... },
-  "error": "",
   "errors": []
 }
 ```
+
+## 🚪 API Gateway
+
+API Gateway, tüm mikroservislere erişim için merkezi bir giriş noktası sağlar. Gateway üzerinden mikroservislere erişim için aşağıdaki endpointleri kullanabilirsiniz.
+
+### Base URL: `http://localhost:5000`
+
+---
+
+### GET `/status`
+
+API Gateway'in çalışma durumunu kontrol eder.
+
+**Response:**
+```json
+{
+  "status": "API Gateway is running",
+  "timestamp": "2025-08-04T12:34:56.789Z"
+}
+```
+
+**Status Codes:**
+- `200 OK`: Gateway çalışıyor
+
+---
+
+### GET `/gateway/info`
+
+API Gateway hakkında detaylı bilgi verir.
+
+**Response:**
+```json
+{
+  "gateway": "CMS API Gateway",
+  "version": "1.0.0",
+  "features": [
+    "Rate Limiting",
+    "Circuit Breaker",
+    "Request Logging",
+    "Health Checks",
+    "Swagger Aggregation"
+  ],
+  "uptime": "2025-08-04T12:34:56.789Z",
+  "services": {
+    "userService": "http://localhost:5001",
+    "contentService": "http://localhost:5002"
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK`: Başarılı
+
+---
+
+### GET `/health`
+
+API Gateway ve bağlı servislerin sağlık durumunu kontrol eder.
+
+**Response:**
+```
+Healthy
+```
+
+**Status Codes:**
+- `200 OK`: Tüm servisler sağlıklı
+- `503 Service Unavailable`: Bir veya daha fazla servis sağlıksız
+
+---
+
+### Rate Limiting
+
+API Gateway, aşırı istekleri önlemek için hız sınırlandırma uygular.
+
+**Limitler:**
+- Dakikada 100 istek
+- Saatte 1000 istek
+
+**Aşıldığında:**
+- `429 Too Many Requests` hatası döner
+- Headers: `X-Rate-Limit-Limit`, `X-Rate-Limit-Remaining`, `X-Rate-Limit-Reset`
+
+---
+
+### Swagger UI
+
+Gateway üzerinden tüm mikroservislerin Swagger dökümantasyonlarına erişim.
+
+**URL:** `http://localhost:5000` (ana sayfada)
+
+**Microservices Swagger Endpoints:**
+- API Gateway: `/swagger/v1/swagger.json`
+- User Service: `/proxy/userservice/swagger/v1/swagger.json`
+- Content Service: `/proxy/contentservice/swagger/v1/swagger.json`
+
+---
+
+### User Service Proxy
+
+Tüm User Service endpointlerine API Gateway üzerinden erişim.
+
+**Base URL:** `/api/users`
+
+**Örnekler:**
+- GET `/api/users` - Tüm kullanıcıları listele
+- GET `/api/users/{id}` - Kullanıcı detayları
+- POST `/api/users` - Yeni kullanıcı oluştur
+- PUT `/api/users/{id}` - Kullanıcı güncelle
+- DELETE `/api/users/{id}` - Kullanıcı sil
+
+---
+
+### Content Service Proxy
+
+Tüm Content Service endpointlerine API Gateway üzerinden erişim.
+
+**Base URL:** `/api/contents`
+
+**Örnekler:**
+- GET `/api/contents` - Tüm içerikleri listele
+- GET `/api/contents/{id}` - İçerik detayları
+- POST `/api/contents` - Yeni içerik oluştur
+- PUT `/api/contents/{id}` - İçerik güncelle
+- DELETE `/api/contents/{id}` - İçerik sil
+- POST `/api/contents/{id}/publish` - İçerik yayınla
 
 ## 👤 User Service API
 

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -22,6 +20,35 @@ services:
       timeout: 5s
       retries: 5
 
+  # API Gateway
+  apigateway:
+    build:
+      context: .
+      dockerfile: docker/ApiGateway.Dockerfile
+    container_name: cms_apigateway
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ServiceUrls__UserService=http://userservice:5001
+      - ServiceUrls__ContentService=http://contentservice:5002
+      - IpRateLimiting__GeneralRules__0__Endpoint=*
+      - IpRateLimiting__GeneralRules__0__Period=1m
+      - IpRateLimiting__GeneralRules__0__Limit=100
+    ports:
+      - "5000:5000"
+    depends_on:
+      - userservice
+      - contentservice
+    networks:
+      - cms_network
+    restart: unless-stopped
+    volumes:
+      - app_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # User Service
   userservice:
     build:
@@ -32,15 +59,17 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=UserServiceDb;Username=postgres;Password=postgres
     ports:
-      - "5001:80"
+      - "5001:5001"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - cms_network
     restart: unless-stopped
+    volumes:
+      - app_logs:/app/logs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -54,9 +83,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=ContentServiceDb;Username=postgres;Password=postgres
-      - Services__UserService__BaseUrl=http://userservice:80
+      - Services__UserService__BaseUrl=http://userservice:5001
     ports:
-      - "5002:80"
+      - "5002:5002"
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,8 +94,10 @@ services:
     networks:
       - cms_network
     restart: unless-stopped
+    volumes:
+      - app_logs:/app/logs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -94,3 +125,4 @@ networks:
 volumes:
   postgres_data:
   pgadmin_data:
+  app_logs:

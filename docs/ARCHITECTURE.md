@@ -5,29 +5,38 @@
 2. [Teknoloji Stack](#teknoloji-stack)
 3. [Tasarım Desenleri](#tasarım-desenleri)
 4. [Servis Detayları](#servis-detayları)
-5. [Veri Modelleri](#veri-modelleri)
-6. [API Spesifikasyonu](#api-spesifikasyonu)
-7. [Güvenlik](#güvenlik)
-8. [Performans](#performans)
-9. [Monitoring ve Logging](#monitoring-ve-logging)
-10. [Deployment](#deployment)
+5. [API Gateway](#api-gateway)
+6. [Veri Modelleri](#veri-modelleri)
+7. [API Spesifikasyonu](#api-spesifikasyonu)
+8. [Güvenlik](#güvenlik)
+9. [Performans](#performans)
+10. [Monitoring ve Logging](#monitoring-ve-logging)
+11. [Deployment](#deployment)
 
 ## 🏗️ Mimari Genel Bakış
 
 ### Mikroservis Mimarisi
-Bu CMS projesi, domain-driven design prensipleriyle ayrılmış iki ana mikroservisten oluşmaktadır:
+Bu CMS projesi, domain-driven design prensipleriyle ayrılmış iki ana mikroservisten ve bunları yöneten bir API Gateway'den oluşmaktadır:
 
 ```
-┌─────────────────┐    HTTP    ┌─────────────────┐
-│  Content Service│◄──────────►│  User Service   │
-│    (Port 5002)  │            │   (Port 5001)   │
-└─────────────────┘            └─────────────────┘
-         │                              │
-         ▼                              ▼
-┌─────────────────┐            ┌─────────────────┐
-│ ContentServiceDb│            │ UserServiceDb   │
-│   (PostgreSQL)  │            │  (PostgreSQL)   │
-└─────────────────┘            └─────────────────┘
+                          ┌─────────────────┐
+                          │   API Gateway   │
+                          │    (Port 5000)  │
+                          └─────────────────┘
+                                  │
+                  ┌───────────────┴───────────────┐
+                  │                               │
+                  ▼                               ▼
+┌─────────────────────┐                 ┌─────────────────────┐
+│   Content Service   │◄───────────────►│    User Service     │
+│     (Port 5002)     │                 │     (Port 5001)     │
+└─────────────────────┘                 └─────────────────────┘
+          │                                       │
+          ▼                                       ▼
+┌─────────────────────┐                 ┌─────────────────────┐
+│  ContentServiceDb   │                 │   UserServiceDb     │
+│    (PostgreSQL)     │                 │    (PostgreSQL)     │
+└─────────────────────┘                 └─────────────────────┘
 ```
 
 ### Clean Architecture Katmanları
@@ -65,9 +74,11 @@ Her mikroservis aşağıdaki katmanlardan oluşmaktadır:
 ## 🛠️ Teknoloji Stack
 
 ### Backend Framework
-- **.NET 8**: LTS version with latest performance improvements
-- **ASP.NET Core 8**: Web API framework
-- **Entity Framework Core 8**: ORM with advanced querying capabilities
+- **.NET 9**: Modern web framework ve en son performans iyileştirmeleri
+- **ASP.NET Core 9**: Web API framework
+- **Entity Framework Core 9**: Gelişmiş sorgulama özellikleriyle ORM
+- **YARP 2.3.0**: .NET için hafif, yüksek performanslı reverse proxy API Gateway
+- **AspNetCoreRateLimit**: IP-tabanlı hız sınırlama
 
 ### Database
 - **PostgreSQL 15**: Primary database for both services
@@ -82,11 +93,12 @@ Her mikroservis aşağıdaki katmanlardan oluşmaktadır:
 - **Validation Pipeline**: Automatic request validation before command/query execution
 - **Smart Database Selection**: Automatic PostgreSQL/In-Memory database provider selection
 - **AutoMapper**: Object mapping (ready for implementation)
+- **Polly**: Resilience patterns (Circuit Breaker, Retry) for API Gateway
 
 ### Logging & Monitoring
-- **Serilog 8.0**: Structured logging
+- **Serilog 8.0**: Structured logging with correlation IDs
 - **Health Checks**: Built-in ASP.NET Core health checks
-- **Swagger/OpenAPI**: API documentation
+- **Swagger/OpenAPI**: API documentation with aggregation in API Gateway
 
 ### Testing
 - **xUnit**: Unit testing framework
@@ -95,9 +107,11 @@ Her mikroservis aşağıdaki katmanlardan oluşmaktadır:
 - **InMemory Database**: Testing database provider
 
 ### Containerization
-- **Docker**: Application containerization
+- **Docker**: Multi-stage build container images
 - **Docker Compose**: Multi-container orchestration
-- **Multi-stage builds**: Optimized container images
+- **Health Checks**: Container-based health monitoring
+- **Layered Image Optimization**: Efficient Docker layer caching
+- **Volume Management**: Persistent storage for PostgreSQL and pgAdmin
 
 ## 🎯 Tasarım Desenleri
 
@@ -165,6 +179,113 @@ public abstract class BaseEntity
 {
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
+}
+```
+
+## 🌐 API Gateway
+
+### Genel Bakış
+API Gateway, CMS Mikroservis mimarisinin ön kapısı olarak işlev görür. Tüm istekleri merkezi bir noktadan yönlendirir, rotalama sağlar ve çeşitli çapraz kesit özellikleri uygular.
+
+```
+┌───────────────────────────────────────┐
+│              Client                   │
+└───────────────────────────────────────┘
+                  │
+                  ▼
+┌───────────────────────────────────────┐
+│          API Gateway (YARP)           │
+│ - Routing                             │
+│ - Rate Limiting                       │
+│ - Circuit Breaker                     │
+│ - Logging & Correlation IDs           │
+│ - Swagger Aggregation                 │
+│ - Health Monitoring                   │
+└───────────────────────────────────────┘
+                  │
+        ┌─────────┴─────────┐
+        │                   │
+        ▼                   ▼
+┌───────────────┐   ┌───────────────┐
+│ User Service  │   │Content Service │
+└───────────────┘   └───────────────┘
+```
+
+### Özellikler
+
+#### Reverse Proxy Routing
+- **YARP (Yet Another Reverse Proxy)**: Microsoft'un hafif ve esnek reverse proxy kütüphanesi
+- **JSON-Based Configuration**: `appsettings.json` içerisinde yapılandırılmış rotalar
+- **Path-Based Routing**: `/api/users/*` ve `/api/contents/*` path'lerine göre yönlendirme
+- **Request Transformation**: İstek üstbilgilerinin eklenmesi ve değiştirilmesi
+- **Load Balancing**: Round-robin algoritması ile yük dengeleme (scale-out desteği)
+
+#### Rate Limiting
+- **IP-Based Rate Limiting**: `AspNetCoreRateLimit` kütüphanesi ile IP-tabanlı hız sınırlandırma
+- **Configurable Rules**: Çeşitli endpoint'ler için özelleştirilebilir limitler
+- **Multiple Time Windows**: Dakika ve saat bazlı limit ayarları (1m, 1h)
+- **Async Processing**: Asenkron kilitleme stratejisi ile yüksek verimlilik
+
+#### Circuit Breaker
+- **Polly Integration**: Polly kütüphanesi ile dayanıklılık desenleri
+- **Configurable Thresholds**: Ayarlanabilir başarısızlık eşikleri
+- **Automatic Recovery**: Belirli bir süre sonra otomatik devre sıfırlama
+- **Retry Policies**: Geçici hatalar için yeniden deneme mekanizması
+
+#### Advanced Logging
+- **Serilog Integration**: Yapılandırılmış loglama
+- **Correlation IDs**: İstekler arası izlenebilirlik için korelasyon ID'leri
+- **Request/Response Logging**: Gelen istek ve yanıtların detaylı loglanması
+- **Performance Tracking**: İstek süreleri ve performans metrikleri
+
+#### Swagger Aggregation
+- **Unified API Documentation**: Tüm mikroservislerin API dökümantasyonlarının tek bir yerde toplanması
+- **CORS-Free Access**: Proxy endpoint'leri aracılığıyla CORS sorunlarını ortadan kaldırma
+- **Interactive Testing**: Doğrudan Swagger UI üzerinden tüm API'leri test etme imkanı
+- **Detailed API Descriptions**: Her mikroservis için detaylı API açıklamaları
+
+#### Health Checks
+- **Active Health Monitoring**: Mikroservislerin düzenli sağlık kontrolü
+- **Automated Failover**: Sağlıksız servislerden otomatik kaçınma
+- **Gateway Health Endpoint**: Gateway'in kendi sağlık durumunu kontrol etme endpoint'i
+- **Downstream Service Checks**: Bağlı servislerin sağlık durumlarını izleme
+
+### Yapılandırma
+
+API Gateway, `appsettings.json` dosyasında detaylı olarak yapılandırılabilir:
+
+```json
+"ReverseProxy": {
+  "Routes": {
+    "users-route": {
+      "ClusterId": "users-cluster",
+      "Match": {
+        "Path": "/api/users/{**catch-all}"
+      }
+    },
+    "contents-route": {
+      "ClusterId": "contents-cluster",
+      "Match": {
+        "Path": "/api/contents/{**catch-all}"
+      }
+    }
+  },
+  "Clusters": {
+    "users-cluster": {
+      "Destinations": {
+        "users-destination": {
+          "Address": "http://localhost:5001/"
+        }
+      }
+    },
+    "contents-cluster": {
+      "Destinations": {
+        "contents-destination": {
+          "Address": "http://localhost:5002/"
+        }
+      }
+    }
+  }
 }
 ```
 

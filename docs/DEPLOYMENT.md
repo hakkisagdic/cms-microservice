@@ -268,6 +268,7 @@ docker-compose -f docker-compose.dev.yml up -d
 # Servisleri local'de çalıştır
 cd src/UserService/UserService.API && dotnet run &
 cd src/ContentService/ContentService.API && dotnet run &
+cd src/ApiGateway && dotnet run &
 ```
 
 ### 2. Production ile Docker
@@ -280,39 +281,176 @@ docker-compose up -d
 docker-compose logs -f
 
 # Health check
-curl http://localhost:5001/health
-curl http://localhost:5002/health
+curl http://localhost:5000/health  # API Gateway
+curl http://localhost:5001/health  # User Service
+curl http://localhost:5002/health  # Content Service
 ```
 
-### 3. Docker Build Optimizasyonu
+### 3. Docker Compose Yapılandırması
 
-**Multi-stage Dockerfile örneği:**
+```yaml
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: cms_postgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - cms_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Gateway
+  apigateway:
+    build:
+      context: .
+      dockerfile: src/ApiGateway/Dockerfile
+    container_name: cms_apigateway
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ServiceUrls__UserService=http://userservice:5001
+      - ServiceUrls__ContentService=http://contentservice:5002
+      - IpRateLimiting__GeneralRules__0__Endpoint=*
+      - IpRateLimiting__GeneralRules__0__Period=1m
+      - IpRateLimiting__GeneralRules__0__Limit=100
+    ports:
+      - "5000:5000"
+    depends_on:
+      - userservice
+      - contentservice
+    networks:
+      - cms_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # User Service
+  userservice:
+    build:
+      context: .
+      dockerfile: src/UserService/Dockerfile
+    # Configuration details...
+
+  # Content Service
+  contentservice:
+    build:
+      context: .
+      dockerfile: src/ContentService/Dockerfile
+    # Configuration details...
+
+  # pgAdmin (Optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    # Configuration details...
+
+networks:
+  cms_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+```
+
+### 4. Docker Build Optimizasyonu
+
+**Multi-stage Dockerfile örneği (API Gateway):**
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY ["src/UserService/UserService.API/UserService.API.csproj", "src/UserService/UserService.API/"]
-COPY ["src/UserService/UserService.Core/UserService.Core.csproj", "src/UserService/UserService.Core/"]
-COPY ["src/UserService/UserService.Infrastructure/UserService.Infrastructure.csproj", "src/UserService/UserService.Infrastructure/"]
-
-RUN dotnet restore "src/UserService/UserService.API/UserService.API.csproj"
+COPY ["src/ApiGateway/ApiGateway.csproj", "src/ApiGateway/"]
+RUN dotnet restore "src/ApiGateway/ApiGateway.csproj"
 COPY . .
-WORKDIR "/src/src/UserService/UserService.API"
-RUN dotnet build "UserService.API.csproj" -c Release -o /app/build
+WORKDIR "/src/src/ApiGateway"
+RUN dotnet build "ApiGateway.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "UserService.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "ApiGateway.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "UserService.API.dll"]
+# Curl kurulumu health check için
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+ENTRYPOINT ["dotnet", "ApiGateway.dll"]
 ```
 
+### 5. Container Yönetimi
+
+#### Containerları Listeleme
+```bash
+docker ps
+```
+
+#### Container Loglarını İzleme
+```bash
+# API Gateway logları
+docker logs cms_apigateway -f
+
+# User Service logları
+docker logs cms_userservice -f
+
+# Content Service logları
+docker logs cms_contentservice -f
+```
+
+#### Container'ı Yeniden Başlatma
+```bash
+docker restart cms_apigateway
+```
+
+#### Container'a Bağlanma (Debug)
+```bash
+docker exec -it cms_apigateway /bin/bash
+```
+
+### 6. Docker Compose Komutları
+
+#### Stack'i Durdurma
+```bash
+docker-compose stop
+```
+
+#### Stack'i Silme (Verileri Koruyarak)
+```bash
+docker-compose down
+```
+
+#### Stack'i Silme (Tüm Verileri Silerek)
+```bash
+docker-compose down -v
+```
+
+#### Servis Rebuildi
+```bash
+docker-compose up -d --build apigateway
+```
+
+#### Tek Servis Restart
+```bash
+docker-compose restart contentservice
+```
 ## ☸️ Kubernetes Deployment
 
 ### 1. Namespace Oluşturma
