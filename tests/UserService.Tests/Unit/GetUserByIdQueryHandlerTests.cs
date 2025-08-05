@@ -22,7 +22,7 @@ public class GetUserByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnUser_WhenUserExists()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var user = new User
         {
@@ -39,10 +39,8 @@ public class GetUserByIdQueryHandlerTests
         _mockUserRepository.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Id.Should().Be(userId);
@@ -56,17 +54,15 @@ public class GetUserByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnFailure_WhenUserDoesNotExist()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var query = new GetUserByIdQuery(userId);
 
         _mockUserRepository.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be("User not found.");
 
@@ -76,7 +72,7 @@ public class GetUserByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnUserWithAllFields_WhenUserHasCompleteData()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var user = new User
         {
@@ -100,10 +96,8 @@ public class GetUserByIdQueryHandlerTests
         _mockUserRepository.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Id.Should().Be(userId);
@@ -124,14 +118,13 @@ public class GetUserByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryThrowsException()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var query = new GetUserByIdQuery(userId);
 
         _mockUserRepository.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database connection failed"));
 
-        // Act & Assert
         await FluentActions.Invoking(() => _handler.Handle(query, CancellationToken.None))
             .Should().ThrowAsync<Exception>()
             .WithMessage("Database connection failed");
@@ -140,7 +133,7 @@ public class GetUserByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnInactiveUser_WhenUserIsInactive()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var user = new User
         {
@@ -157,10 +150,8 @@ public class GetUserByIdQueryHandlerTests
         _mockUserRepository.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Status.Should().Be(UserStatus.Inactive);

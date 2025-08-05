@@ -11,10 +11,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Database configuration - test PostgreSQL connection first
+
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         var useInMemory = ShouldUseInMemoryDatabase(connectionString);
-        
+
         if (useInMemory)
         {
             Console.WriteLine("Using in-memory database for UserService");
@@ -28,7 +28,6 @@ public static class DependencyInjection
                 options.UseNpgsql(connectionString));
         }
 
-        // Repository registration
         services.AddScoped<IUserRepository, UserRepository>();
 
         return services;
@@ -43,12 +42,12 @@ public static class DependencyInjection
         {
             using var connection = new Npgsql.NpgsqlConnection(connectionString);
             connection.Open();
-            return false; // PostgreSQL connection successful
+            return false;
         }
         catch (Exception)
         {
-            // Suppress the exception to avoid log noise
-            return true; // Use in-memory if PostgreSQL connection fails
+
+            return true;
         }
     }
 }

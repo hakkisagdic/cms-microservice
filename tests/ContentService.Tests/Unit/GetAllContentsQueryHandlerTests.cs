@@ -22,7 +22,7 @@ public class GetAllContentsQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnAllContents_WhenContentsExist()
     {
-        // Arrange
+
         var contents = new List<Content>
         {
             new Content
@@ -56,10 +56,8 @@ public class GetAllContentsQueryHandlerTests
         _mockContentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(contents);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Should().HaveCount(2);
@@ -72,17 +70,15 @@ public class GetAllContentsQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnEmptyList_WhenNoContentsExist()
     {
-        // Arrange
+
         var contents = new List<Content>();
         var query = new GetAllContentsQuery();
 
         _mockContentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(contents);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Should().BeEmpty();
@@ -93,7 +89,7 @@ public class GetAllContentsQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnContentsWithDifferentStatuses_WhenMixedStatusContentsExist()
     {
-        // Arrange
+
         var contents = new List<Content>
         {
             new Content
@@ -136,10 +132,8 @@ public class GetAllContentsQueryHandlerTests
         _mockContentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(contents);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Should().HaveCount(3);
@@ -151,7 +145,7 @@ public class GetAllContentsQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnContentsWithDifferentTypes_WhenMixedTypeContentsExist()
     {
-        // Arrange
+
         var contents = new List<Content>
         {
             new Content
@@ -183,10 +177,8 @@ public class GetAllContentsQueryHandlerTests
         _mockContentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(contents);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Should().HaveCount(2);
@@ -197,13 +189,12 @@ public class GetAllContentsQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryThrowsException()
     {
-        // Arrange
+
         var query = new GetAllContentsQuery();
 
         _mockContentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database connection failed"));
 
-        // Act & Assert
         await FluentActions.Invoking(() => _handler.Handle(query, CancellationToken.None))
             .Should().ThrowAsync<Exception>()
             .WithMessage("Database connection failed");
@@ -212,7 +203,7 @@ public class GetAllContentsQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnContentsWithCompleteData_WhenContentsHaveAllFields()
     {
-        // Arrange
+
         var contents = new List<Content>
         {
             new Content
@@ -246,14 +237,12 @@ public class GetAllContentsQueryHandlerTests
         _mockContentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(contents);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Should().HaveCount(1);
-        
+
         var content = result.Value!.First();
         content.FeaturedImageUrl.Should().Be("featured.jpg");
         content.MetaTitle.Should().Be("Complete Meta Title");
@@ -268,10 +257,10 @@ public class GetAllContentsQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnContentsOrderedByCreationDate_WhenMultipleContentsExist()
     {
-        // Arrange
+
         var olderDate = DateTime.UtcNow.AddDays(-10);
         var newerDate = DateTime.UtcNow.AddDays(-1);
-        
+
         var contents = new List<Content>
         {
             new Content
@@ -303,15 +292,12 @@ public class GetAllContentsQueryHandlerTests
         _mockContentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(contents);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Should().HaveCount(2);
-        
-        // Verify that we can access the creation dates (ordering logic might be in repository)
+
         result.Value!.Should().Contain(c => c.CreatedAt == olderDate);
         result.Value!.Should().Contain(c => c.CreatedAt == newerDate);
     }

@@ -22,7 +22,7 @@ public class GetContentByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnContent_WhenContentExists()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var content = new Content
         {
@@ -45,10 +45,8 @@ public class GetContentByIdQueryHandlerTests
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(content);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Id.Should().Be(contentId);
@@ -66,17 +64,15 @@ public class GetContentByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnFailure_WhenContentDoesNotExist()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var query = new GetContentByIdQuery(contentId);
 
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Content?)null);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be("Content not found.");
 
@@ -86,7 +82,7 @@ public class GetContentByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnContentWithAllFields_WhenContentHasCompleteData()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var publishedAt = DateTime.UtcNow.AddDays(-1);
         var content = new Content
@@ -119,10 +115,8 @@ public class GetContentByIdQueryHandlerTests
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(content);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Id.Should().Be(contentId);
@@ -151,14 +145,13 @@ public class GetContentByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryThrowsException()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var query = new GetContentByIdQuery(contentId);
 
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database connection failed"));
 
-        // Act & Assert
         await FluentActions.Invoking(() => _handler.Handle(query, CancellationToken.None))
             .Should().ThrowAsync<Exception>()
             .WithMessage("Database connection failed");
@@ -167,7 +160,7 @@ public class GetContentByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnDraftContent_WhenContentIsDraft()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var content = new Content
         {
@@ -186,10 +179,8 @@ public class GetContentByIdQueryHandlerTests
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(content);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Status.Should().Be(ContentStatus.Draft);
@@ -199,7 +190,7 @@ public class GetContentByIdQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnPageContent_WhenContentIsPage()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var content = new Content
         {
@@ -219,10 +210,8 @@ public class GetContentByIdQueryHandlerTests
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(content);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Type.Should().Be(ContentType.Page);

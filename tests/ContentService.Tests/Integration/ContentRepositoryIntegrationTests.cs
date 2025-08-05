@@ -25,7 +25,7 @@ public class ContentRepositoryIntegrationTests : IDisposable
     [Fact]
     public async Task AddAsync_ShouldAddContent_WhenValidContent()
     {
-        // Arrange
+
         var content = new Content
         {
             Title = "Test Content",
@@ -40,10 +40,8 @@ public class ContentRepositoryIntegrationTests : IDisposable
             CreatedAt = DateTime.UtcNow
         };
 
-        // Act
         var result = await _repository.AddAsync(content, CancellationToken.None);
 
-        // Assert
         result.Should().NotBeNull();
         result.Id.Should().NotBe(Guid.Empty);
         result.Title.Should().Be("Test Content");
@@ -57,7 +55,7 @@ public class ContentRepositoryIntegrationTests : IDisposable
     [Fact]
     public async Task GetByIdAsync_ShouldReturnContent_WhenContentExists()
     {
-        // Arrange
+
         var content = new Content
         {
             Title = "Test Content",
@@ -75,10 +73,8 @@ public class ContentRepositoryIntegrationTests : IDisposable
         _context.Contents.Add(content);
         await _context.SaveChangesAsync();
 
-        // Act
         var result = await _repository.GetByIdAsync(content.Id, CancellationToken.None);
 
-        // Assert
         result.Should().NotBeNull();
         result!.Id.Should().Be(content.Id);
         result.Title.Should().Be("Test Content");
@@ -87,20 +83,18 @@ public class ContentRepositoryIntegrationTests : IDisposable
     [Fact]
     public async Task GetByIdAsync_ShouldReturnNull_WhenContentDoesNotExist()
     {
-        // Arrange
+
         var nonExistentId = Guid.NewGuid();
 
-        // Act
         var result = await _repository.GetByIdAsync(nonExistentId, CancellationToken.None);
 
-        // Assert
         result.Should().BeNull();
     }
 
     [Fact]
     public async Task GetAllAsync_ShouldReturnAllContents()
     {
-        // Arrange
+
         var contents = new List<Content>
         {
             new Content
@@ -130,10 +124,8 @@ public class ContentRepositoryIntegrationTests : IDisposable
         _context.Contents.AddRange(contents);
         await _context.SaveChangesAsync();
 
-        // Act
         var result = await _repository.GetAllAsync(CancellationToken.None);
 
-        // Assert
         result.Should().NotBeNull();
         result.Should().HaveCount(2);
         result.Select(c => c.Title).Should().Contain(new[] { "Content 1", "Content 2" });
@@ -142,7 +134,7 @@ public class ContentRepositoryIntegrationTests : IDisposable
     [Fact]
     public async Task UpdateAsync_ShouldUpdateContent_WhenContentExists()
     {
-        // Arrange
+
         var content = new Content
         {
             Title = "Original Title",
@@ -158,16 +150,13 @@ public class ContentRepositoryIntegrationTests : IDisposable
         _context.Contents.Add(content);
         await _context.SaveChangesAsync();
 
-        // Modify content
         content.Title = "Updated Title";
         content.Body = "Updated Body";
         content.Status = ContentStatus.Published;
         content.UpdatedAt = DateTime.UtcNow;
 
-        // Act
         var result = await _repository.UpdateAsync(content, CancellationToken.None);
 
-        // Assert
         result.Should().NotBeNull();
         result!.Title.Should().Be("Updated Title");
         result.Body.Should().Be("Updated Body");
@@ -182,7 +171,7 @@ public class ContentRepositoryIntegrationTests : IDisposable
     [Fact]
     public async Task DeleteAsync_ShouldDeleteContent_WhenContentExists()
     {
-        // Arrange
+
         var content = new Content
         {
             Title = "Content to Delete",
@@ -198,10 +187,8 @@ public class ContentRepositoryIntegrationTests : IDisposable
         _context.Contents.Add(content);
         await _context.SaveChangesAsync();
 
-        // Act
         var result = await _repository.DeleteAsync(content.Id, CancellationToken.None);
 
-        // Assert
         result.Should().BeTrue();
 
         var deletedContent = await _context.Contents.FindAsync(content.Id);
@@ -213,20 +200,18 @@ public class ContentRepositoryIntegrationTests : IDisposable
     [Fact]
     public async Task DeleteAsync_ShouldReturnFalse_WhenContentDoesNotExist()
     {
-        // Arrange
+
         var nonExistentId = Guid.NewGuid();
 
-        // Act
         var result = await _repository.DeleteAsync(nonExistentId, CancellationToken.None);
 
-        // Assert
         result.Should().BeFalse();
     }
 
     [Fact]
     public async Task SlugExistsAsync_ShouldReturnTrue_WhenSlugExists()
     {
-        // Arrange
+
         var content = new Content
         {
             Title = "Test Content",
@@ -242,20 +227,17 @@ public class ContentRepositoryIntegrationTests : IDisposable
         _context.Contents.Add(content);
         await _context.SaveChangesAsync();
 
-        // Act
         var result = await _repository.SlugExistsAsync("existing-slug", CancellationToken.None);
 
-        // Assert
         result.Should().BeTrue();
     }
 
     [Fact]
     public async Task SlugExistsAsync_ShouldReturnFalse_WhenSlugDoesNotExist()
     {
-        // Act
+
         var result = await _repository.SlugExistsAsync("non-existent-slug", CancellationToken.None);
 
-        // Assert
         result.Should().BeFalse();
     }
 

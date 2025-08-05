@@ -19,7 +19,7 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_FirstName_Is_Empty()
     {
-        // Arrange
+
         var dto = new UpdateUserDto(
             "",
             "Doe",
@@ -33,7 +33,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.FirstName);
     }
@@ -41,7 +40,7 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_LastName_Is_Empty()
     {
-        // Arrange
+
         var dto = new UpdateUserDto(
             "John",
             "",
@@ -55,7 +54,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.LastName);
     }
@@ -63,7 +61,7 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_Email_Is_Invalid()
     {
-        // Arrange
+
         var dto = new UpdateUserDto(
             "John",
             "Doe",
@@ -77,7 +75,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.Email);
     }
@@ -85,7 +82,7 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_FirstName_Is_Too_Long()
     {
-        // Arrange
+
         var longName = new string('a', 101);
         var dto = new UpdateUserDto(
             longName,
@@ -100,7 +97,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.FirstName);
     }
@@ -108,7 +104,7 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_LastName_Is_Too_Long()
     {
-        // Arrange
+
         var longName = new string('a', 101);
         var dto = new UpdateUserDto(
             "John",
@@ -123,7 +119,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.LastName);
     }
@@ -131,8 +126,8 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_Email_Is_Too_Long()
     {
-                // Arrange - Create an email that exceeds 255 characters
-        var longEmail = new string('a', 250) + "@example.com"; // 261 characters total
+
+        var longEmail = new string('a', 250) + "@example.com";
         var dto = new UpdateUserDto(
             "John",
             "Doe",
@@ -146,7 +141,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.Email);
     }
@@ -154,7 +148,7 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_PhoneNumber_Is_Invalid()
     {
-        // Arrange
+
         var dto = new UpdateUserDto(
             "John",
             "Doe",
@@ -168,7 +162,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.PhoneNumber);
     }
@@ -176,7 +169,7 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_DateOfBirth_Is_In_Future()
     {
-        // Arrange
+
         var futureDate = DateTime.UtcNow.AddDays(1);
         var dto = new UpdateUserDto(
             "John",
@@ -191,7 +184,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.DateOfBirth);
     }
@@ -199,7 +191,7 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Not_Have_Error_When_All_Fields_Are_Valid()
     {
-        // Arrange
+
         var dto = new UpdateUserDto(
             "John",
             "Doe",
@@ -213,7 +205,6 @@ public class UpdateUserDtoValidatorTests
             "Developer"
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -221,7 +212,7 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Not_Have_Error_When_Optional_Fields_Are_Null()
     {
-        // Arrange
+
         var dto = new UpdateUserDto(
             "John",
             "Doe",
@@ -235,7 +226,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -243,7 +233,7 @@ public class UpdateUserDtoValidatorTests
     [Fact]
     public void Should_Not_Have_Error_When_Status_Is_Different()
     {
-        // Arrange
+
         var dto = new UpdateUserDto(
             "John",
             "Doe",
@@ -257,7 +247,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -269,7 +258,7 @@ public class UpdateUserDtoValidatorTests
     [InlineData("user123@domain-name.com")]
     public void Should_Not_Have_Error_When_Email_Format_Is_Valid(string email)
     {
-        // Arrange
+
         var dto = new UpdateUserDto(
             "John",
             "Doe",
@@ -283,7 +272,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldNotHaveValidationErrorFor(x => x.Email);
     }
@@ -295,7 +283,7 @@ public class UpdateUserDtoValidatorTests
     [InlineData("123-456-7890")]
     public void Should_Not_Have_Error_When_PhoneNumber_Format_Is_Valid(string phoneNumber)
     {
-        // Arrange
+
         var dto = new UpdateUserDto(
             "John",
             "Doe",
@@ -309,7 +297,6 @@ public class UpdateUserDtoValidatorTests
             null
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldNotHaveValidationErrorFor(x => x.PhoneNumber);
     }

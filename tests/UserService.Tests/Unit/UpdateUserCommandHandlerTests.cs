@@ -22,7 +22,7 @@ public class UpdateUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldUpdateUser_WhenUserExistsAndValidRequest()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var existingUser = new User
         {
@@ -72,10 +72,8 @@ public class UpdateUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(updatedUser);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.FirstName.Should().Be(updateUserDto.FirstName);
@@ -92,7 +90,7 @@ public class UpdateUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldFail_WhenUserDoesNotExist()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var updateUserDto = new UpdateUserDto(
             "Johnny",
@@ -112,10 +110,8 @@ public class UpdateUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be("User not found.");
 
@@ -126,7 +122,7 @@ public class UpdateUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldUpdateOnlyProvidedFields_WhenPartialUpdate()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var existingUser = new User
         {
@@ -143,16 +139,16 @@ public class UpdateUserCommandHandlerTests
         };
 
         var updateUserDto = new UpdateUserDto(
-            "Johnny", // Only update FirstName
-            existingUser.LastName,     // Keep existing LastName
+            "Johnny",
+            existingUser.LastName,
             existingUser.Email,
-            existingUser.PhoneNumber,     // Keep existing PhoneNumber
-            existingUser.DateOfBirth,     // Keep existing DateOfBirth
+            existingUser.PhoneNumber,
+            existingUser.DateOfBirth,
             existingUser.Status,
-            existingUser.ProfileImageUrl,     // Keep existing ProfileImageUrl
-            "Updated bio", // Update Bio
-            existingUser.Department,     // Keep existing Department
-            existingUser.Position      // Keep existing Position
+            existingUser.ProfileImageUrl,
+            "Updated bio",
+            existingUser.Department,
+            existingUser.Position
         );
 
         var command = new UpdateUserCommand(userId, updateUserDto);
@@ -163,24 +159,22 @@ public class UpdateUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User user, CancellationToken _) => user);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.FirstName.Should().Be("Johnny");
-        result.Value.LastName.Should().Be("Doe"); // Should remain unchanged
-        result.Value.PhoneNumber.Should().Be("0987654321"); // Should remain unchanged
+        result.Value.LastName.Should().Be("Doe");
+        result.Value.PhoneNumber.Should().Be("0987654321");
         result.Value.Bio.Should().Be("Updated bio");
-        result.Value.Department.Should().Be("IT"); // Should remain unchanged
-        result.Value.Position.Should().Be("Developer"); // Should remain unchanged
+        result.Value.Department.Should().Be("IT");
+        result.Value.Position.Should().Be("Developer");
     }
 
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryGetThrowsException()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var updateUserDto = new UpdateUserDto("John", "Doe", "john@example.com", null, null, UserStatus.Active, null, null, null, null);
         var command = new UpdateUserCommand(userId, updateUserDto);
@@ -188,7 +182,6 @@ public class UpdateUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database connection failed"));
 
-        // Act & Assert
         await FluentActions.Invoking(() => _handler.Handle(command, CancellationToken.None))
             .Should().ThrowAsync<Exception>()
             .WithMessage("Database connection failed");
@@ -197,7 +190,7 @@ public class UpdateUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryUpdateThrowsException()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var existingUser = new User
         {
@@ -218,7 +211,6 @@ public class UpdateUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Update failed"));
 
-        // Act & Assert
         await FluentActions.Invoking(() => _handler.Handle(command, CancellationToken.None))
             .Should().ThrowAsync<Exception>()
             .WithMessage("Update failed");

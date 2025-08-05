@@ -22,7 +22,7 @@ public class GetAllUsersQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnAllUsers_WhenUsersExist()
     {
-        // Arrange
+
         var users = new List<User>
         {
             new User
@@ -50,10 +50,8 @@ public class GetAllUsersQueryHandlerTests
         _mockUserRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Should().HaveCount(2);
@@ -66,17 +64,15 @@ public class GetAllUsersQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnEmptyList_WhenNoUsersExist()
     {
-        // Arrange
+
         var users = new List<User>();
         var query = new GetAllUsersQuery();
 
         _mockUserRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Should().BeEmpty();
@@ -87,7 +83,7 @@ public class GetAllUsersQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnUsersWithDifferentStatuses_WhenMixedStatusUsersExist()
     {
-        // Arrange
+
         var users = new List<User>
         {
             new User
@@ -115,10 +111,8 @@ public class GetAllUsersQueryHandlerTests
         _mockUserRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Should().HaveCount(2);
@@ -129,13 +123,12 @@ public class GetAllUsersQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryThrowsException()
     {
-        // Arrange
+
         var query = new GetAllUsersQuery();
 
         _mockUserRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database connection failed"));
 
-        // Act & Assert
         await FluentActions.Invoking(() => _handler.Handle(query, CancellationToken.None))
             .Should().ThrowAsync<Exception>()
             .WithMessage("Database connection failed");
@@ -144,7 +137,7 @@ public class GetAllUsersQueryHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnUsersWithCompleteData_WhenUsersHaveAllFields()
     {
-        // Arrange
+
         var users = new List<User>
         {
             new User
@@ -170,14 +163,12 @@ public class GetAllUsersQueryHandlerTests
         _mockUserRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Should().HaveCount(1);
-        
+
         var user = result.Value!.First();
         user.PhoneNumber.Should().Be("1234567890");
         user.DateOfBirth.Should().NotBeNull();

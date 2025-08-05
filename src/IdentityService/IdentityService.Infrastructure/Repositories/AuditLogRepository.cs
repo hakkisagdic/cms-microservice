@@ -66,7 +66,7 @@ public class AuditLogRepository : GenericRepository<AuditLog>, IAuditLogReposito
     public async Task CleanupOldLogsAsync(int daysToKeep = 90)
     {
         var cutoffDate = DateTime.UtcNow.AddDays(-daysToKeep);
-        
+
         var oldLogs = await _dbSet
             .Where(al => al.Timestamp < cutoffDate)
             .ToListAsync();
@@ -77,8 +77,8 @@ public class AuditLogRepository : GenericRepository<AuditLog>, IAuditLogReposito
     public async Task<int> GetFailedAttemptCountAsync(string userId, DateTime since)
     {
         return await _dbSet
-            .CountAsync(al => al.UserId == userId && 
-                             !al.IsSuccessful && 
+            .CountAsync(al => al.UserId == userId &&
+                             !al.IsSuccessful &&
                              al.Timestamp >= since);
     }
 }

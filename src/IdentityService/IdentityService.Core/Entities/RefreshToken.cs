@@ -13,10 +13,9 @@ public class RefreshToken
     public string? RevokedReason { get; set; }
     public string? IpAddress { get; set; }
     public string? UserAgent { get; set; }
-    
-    // Foreign key
+
     public string UserId { get; set; } = string.Empty;
     public virtual ApplicationUser User { get; set; } = null!;
-    
+
     public bool IsActive => !IsRevoked && !IsUsed && DateTime.UtcNow <= ExpiryDate;
 }

@@ -109,7 +109,6 @@ public class UserService : IUserService
         if (user == null)
             return false;
 
-        // Soft delete by changing status
         user.Status = UserStatus.Deactivated;
         user.UpdatedAt = DateTime.UtcNow;
 

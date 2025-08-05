@@ -22,9 +22,9 @@ public class RefreshTokenRepository : GenericRepository<RefreshToken>, IRefreshT
     {
         return await _dbSet
             .Include(rt => rt.User)
-            .FirstOrDefaultAsync(rt => rt.UserId == userId && 
-                                     !rt.IsRevoked && 
-                                     !rt.IsUsed && 
+            .FirstOrDefaultAsync(rt => rt.UserId == userId &&
+                                     !rt.IsRevoked &&
+                                     !rt.IsUsed &&
                                      rt.ExpiryDate > DateTime.UtcNow);
     }
 
@@ -32,9 +32,9 @@ public class RefreshTokenRepository : GenericRepository<RefreshToken>, IRefreshT
     {
         return await _dbSet
             .Include(rt => rt.User)
-            .Where(rt => rt.UserId == userId && 
-                        !rt.IsRevoked && 
-                        !rt.IsUsed && 
+            .Where(rt => rt.UserId == userId &&
+                        !rt.IsRevoked &&
+                        !rt.IsUsed &&
                         rt.ExpiryDate > DateTime.UtcNow)
             .ToListAsync();
     }
@@ -65,7 +65,7 @@ public class RefreshTokenRepository : GenericRepository<RefreshToken>, IRefreshT
     {
         var expiredTokens = await _dbSet
             .Where(rt => rt.ExpiryDate < DateTime.UtcNow || rt.IsRevoked || rt.IsUsed)
-            .Where(rt => rt.CreatedAt < DateTime.UtcNow.AddDays(-30)) // Keep for 30 days for audit
+            .Where(rt => rt.CreatedAt < DateTime.UtcNow.AddDays(-30))
             .ToListAsync();
 
         _dbSet.RemoveRange(expiredTokens);

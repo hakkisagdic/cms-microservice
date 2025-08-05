@@ -38,7 +38,7 @@ public class AuthenticationService : IAuthenticationService
             {
                 await _auditService.LogLoginAttemptAsync(
                     request.Email, request.Email, false, ipAddress, userAgent, "User not found");
-                
+
                 return new AuthenticationResult
                 {
                     IsSuccess = false,
@@ -50,7 +50,7 @@ public class AuthenticationService : IAuthenticationService
             {
                 await _auditService.LogLoginAttemptAsync(
                     user.Id, user.Email!, false, ipAddress, userAgent, "User account is not active");
-                
+
                 return new AuthenticationResult
                 {
                     IsSuccess = false,
@@ -59,7 +59,7 @@ public class AuthenticationService : IAuthenticationService
             }
 
             var result = await _userManager.CheckPasswordAsync(user, request.Password);
-            
+
             if (!result)
             {
                 string errorMessage;
@@ -86,29 +86,25 @@ public class AuthenticationService : IAuthenticationService
                 };
             }
 
-            // Update last login
             user.LastLoginAt = DateTime.UtcNow;
             user.UpdatedAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
 
-            // Get user roles
             var roles = await _userManager.GetRolesAsync(user);
 
-            // Generate tokens
             var jwtToken = _jwtService.GenerateJwtToken(
                 user.Id, user.Email!, user.FirstName, user.LastName, roles);
-            
+
             var refreshToken = _jwtService.GenerateRefreshToken();
             var jwtId = _jwtService.GetJwtIdFromToken(jwtToken);
 
-            // Save refresh token
             var refreshTokenEntity = new RefreshToken
             {
                 Token = refreshToken,
                 JwtId = jwtId!,
                 UserId = user.Id,
                 CreatedAt = DateTime.UtcNow,
-                ExpiryDate = DateTime.UtcNow.AddDays(30), // 30 days
+                ExpiryDate = DateTime.UtcNow.AddDays(30),
                 IpAddress = ipAddress,
                 UserAgent = userAgent
             };
@@ -153,7 +149,7 @@ public class AuthenticationService : IAuthenticationService
     {
         try
         {
-            // Check if user already exists
+
             var existingUser = await _userManager.FindByEmailAsync(request.Email);
             if (existingUser != null)
             {
@@ -178,7 +174,7 @@ public class AuthenticationService : IAuthenticationService
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
-            
+
             if (!result.Succeeded)
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
@@ -219,8 +215,8 @@ public class AuthenticationService : IAuthenticationService
         try
         {
             var refreshToken = await _refreshTokenRepository.GetByTokenAsync(request.RefreshToken);
-            
-            if (refreshToken == null || refreshToken.IsRevoked || refreshToken.IsUsed || 
+
+            if (refreshToken == null || refreshToken.IsRevoked || refreshToken.IsUsed ||
                 refreshToken.ExpiryDate < DateTime.UtcNow)
             {
                 return new AuthenticationResult
@@ -230,7 +226,6 @@ public class AuthenticationService : IAuthenticationService
                 };
             }
 
-            // Mark the refresh token as used
             refreshToken.IsUsed = true;
             _refreshTokenRepository.Update(refreshToken);
 
@@ -244,17 +239,14 @@ public class AuthenticationService : IAuthenticationService
                 };
             }
 
-            // Get user roles
             var roles = await _userManager.GetRolesAsync(user);
 
-            // Generate new tokens
             var jwtToken = _jwtService.GenerateJwtToken(
                 user.Id, user.Email!, user.FirstName, user.LastName, roles);
-            
+
             var newRefreshToken = _jwtService.GenerateRefreshToken();
             var jwtId = _jwtService.GetJwtIdFromToken(jwtToken);
 
-            // Save new refresh token
             var newRefreshTokenEntity = new RefreshToken
             {
                 Token = newRefreshToken,
@@ -301,7 +293,7 @@ public class AuthenticationService : IAuthenticationService
         try
         {
             var refreshToken = await _refreshTokenRepository.GetByTokenAsync(token);
-            
+
             if (refreshToken == null || refreshToken.IsRevoked)
                 return false;
 
@@ -327,7 +319,6 @@ public class AuthenticationService : IAuthenticationService
             if (user == null)
                 return false;
 
-            // Revoke all refresh tokens for the user
             await _refreshTokenRepository.RevokeAllUserTokensAsync(userId, "User logged out");
             await _refreshTokenRepository.SaveChangesAsync();
 
@@ -352,13 +343,12 @@ public class AuthenticationService : IAuthenticationService
             }
 
             var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
-            
+
             if (result.Succeeded)
             {
                 await _auditService.LogPasswordChangeAsync(
                     userId, user.Email!, true, ipAddress, userAgent);
 
-                // Revoke all refresh tokens to force re-login
                 await _refreshTokenRepository.RevokeAllUserTokensAsync(userId, "Password changed");
                 await _refreshTokenRepository.SaveChangesAsync();
 

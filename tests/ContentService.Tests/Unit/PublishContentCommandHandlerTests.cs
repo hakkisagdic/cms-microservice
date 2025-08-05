@@ -22,7 +22,7 @@ public class PublishContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldPublishContent_WhenContentExists()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var draftContent = new Content
         {
@@ -46,10 +46,8 @@ public class PublishContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.UpdateAsync(It.IsAny<Content>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Content content, CancellationToken ct) => content);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Status.Should().Be(ContentStatus.Published);
@@ -63,7 +61,7 @@ public class PublishContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldPublishContentNow_WhenNoPublishDateProvided()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var draftContent = new Content
         {
@@ -78,7 +76,7 @@ public class PublishContentCommandHandlerTests
             PublishedAt = null
         };
 
-        var publishData = new PublishContentDto(null); // No specific publish date
+        var publishData = new PublishContentDto(null);
         var command = new PublishContentCommand(contentId, publishData);
 
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
@@ -87,10 +85,8 @@ public class PublishContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.UpdateAsync(It.IsAny<Content>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Content content, CancellationToken ct) => content);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Status.Should().Be(ContentStatus.Published);
@@ -104,7 +100,7 @@ public class PublishContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldFail_WhenContentDoesNotExist()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var publishData = new PublishContentDto(DateTime.UtcNow);
         var command = new PublishContentCommand(contentId, publishData);
@@ -112,10 +108,8 @@ public class PublishContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Content?)null);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be("Content not found.");
 
@@ -126,7 +120,7 @@ public class PublishContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldRepublishContent_WhenContentIsAlreadyPublished()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var publishedContent = new Content
         {
@@ -151,10 +145,8 @@ public class PublishContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.UpdateAsync(It.IsAny<Content>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Content content, CancellationToken ct) => content);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Status.Should().Be(ContentStatus.Published);
@@ -168,7 +160,7 @@ public class PublishContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryFails()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var publishData = new PublishContentDto(DateTime.UtcNow);
         var command = new PublishContentCommand(contentId, publishData);
@@ -176,7 +168,6 @@ public class PublishContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
 
-        // Act & Assert
         await Assert.ThrowsAsync<Exception>(async () =>
             await _handler.Handle(command, CancellationToken.None));
 
@@ -186,7 +177,7 @@ public class PublishContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldSetUpdatedAt_WhenContentIsPublished()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var draftContent = new Content
         {
@@ -211,17 +202,15 @@ public class PublishContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.UpdateAsync(It.IsAny<Content>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Content content, CancellationToken ct) => content);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value!.UpdatedAt.Should().NotBeNull();
         result.Value.UpdatedAt!.Value.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
 
-        _mockContentRepository.Verify(x => x.UpdateAsync(It.Is<Content>(c => 
-            c.UpdatedAt != null && 
-            c.Status == ContentStatus.Published && 
+        _mockContentRepository.Verify(x => x.UpdateAsync(It.Is<Content>(c =>
+            c.UpdatedAt != null &&
+            c.Status == ContentStatus.Published &&
             c.PublishedAt != null), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

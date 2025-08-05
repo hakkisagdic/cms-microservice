@@ -10,8 +10,7 @@ public class User : BaseEntity
     public UserStatus Status { get; set; } = UserStatus.Active;
     public string? ProfileImageUrl { get; set; }
     public string? Bio { get; set; }
-    
-    // Navigation properties for potential future extensions
+
     public string? Department { get; set; }
     public string? Position { get; set; }
 }

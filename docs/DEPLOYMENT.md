@@ -47,6 +47,27 @@ cd src/UserService/UserService.API
 # NuGet paketlerini geri yükle
 dotnet restore
 
+#### Identity Service Başlatma
+```bash
+cd src/IdentityService/IdentityService.API
+
+# NuGet paketlerini geri yükle
+dotnet restore
+
+# Veritabanı migrations
+dotnet ef database update
+
+# Servisi başlat
+dotnet run
+```
+
+#### User Service Başlatma
+```bash
+cd src/UserService/UserService.API
+
+# NuGet paketlerini geri yükle
+dotnet restore
+
 # Veritabanı migrations
 dotnet ef database update
 
@@ -68,13 +89,54 @@ dotnet ef database update
 dotnet run
 ```
 
+#### API Gateway Başlatma
+```bash
+cd src/ApiGateway
+
+# NuGet paketlerini geri yükle
+dotnet restore
+
+# API Gateway'i başlat
+dotnet run
+```
+
 ### 2. Development Environment Variables
+
+**Identity Service (appsettings.Development.json):**
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=IdentityServiceDb_Dev;Username=postgres;Password=postgres"
+  },
+  "JwtSettings": {
+    "Secret": "YourSuperSecretKeyThatIsAtLeast32CharactersLongForDevelopment",
+    "Issuer": "CMS-ApiGateway",
+    "Audience": "CMS-Services",
+    "ExpiryMinutes": 60,
+    "KeyId": "cms-key-1"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Information",
+      "Microsoft.EntityFrameworkCore": "Information"
+    }
+  }
+}
+```
 
 **User Service (appsettings.Development.json):**
 ```json
 {
   "ConnectionStrings": {
     "DefaultConnection": "Host=localhost;Port=5432;Database=UserServiceDb_Dev;Username=postgres;Password=postgres"
+  },
+  "JwtSettings": {
+    "Secret": "YourSuperSecretKeyThatIsAtLeast32CharactersLongForDevelopment",
+    "Issuer": "CMS-ApiGateway",
+    "Audience": "CMS-Services",
+    "ExpiryMinutes": 60,
+    "KeyId": "cms-key-1"
   },
   "Logging": {
     "LogLevel": {
@@ -97,6 +159,37 @@ dotnet run
     "UserService": {
       "BaseUrl": "http://localhost:5001"
     }
+  },
+  "JwtSettings": {
+    "Secret": "YourSuperSecretKeyThatIsAtLeast32CharactersLongForDevelopment",
+    "Issuer": "CMS-ApiGateway",
+    "Audience": "CMS-Services",
+    "ExpiryMinutes": 60,
+    "KeyId": "cms-key-1"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Information"
+    }
+  }
+}
+```
+
+**API Gateway (appsettings.Development.json):**
+```json
+{
+  "JwtSettings": {
+    "Secret": "YourSuperSecretKeyThatIsAtLeast32CharactersLongForDevelopment",
+    "Issuer": "CMS-ApiGateway",
+    "Audience": "CMS-Services",
+    "ExpiryMinutes": 60,
+    "KeyId": "cms-key-1"
+  },
+  "ServiceUrls": {
+    "IdentityService": "http://localhost:5128",
+    "UserService": "http://localhost:5001",
+    "ContentService": "http://localhost:5002"
   },
   "Logging": {
     "LogLevel": {
@@ -131,13 +224,21 @@ sudo systemctl enable postgresql
 git clone <repository-url>
 cd cms-microservice
 
+# Identity Service build
+cd src/IdentityService/IdentityService.API
+dotnet publish -c Release -o /opt/identityservice
+
 # User Service build
-cd src/UserService/UserService.API
+cd ../../../src/UserService/UserService.API
 dotnet publish -c Release -o /opt/userservice
 
 # Content Service build
 cd ../../../src/ContentService/ContentService.API
 dotnet publish -c Release -o /opt/contentservice
+
+# API Gateway build
+cd ../../../src/ApiGateway
+dotnet publish -c Release -o /opt/apigateway
 ```
 
 #### Systemd Service Dosyaları

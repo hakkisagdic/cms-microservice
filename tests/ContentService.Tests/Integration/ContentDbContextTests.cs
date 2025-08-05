@@ -22,26 +22,23 @@ public class ContentDbContextTests : IDisposable
     [Fact]
     public void ContentDbContext_ShouldHaveContentsDbSet()
     {
-        // Assert
+
         _context.Contents.Should().NotBeNull();
     }
 
     [Fact]
     public void ContentEntity_ShouldHaveCorrectConfiguration()
     {
-        // Arrange
+
         var entityType = _context.Model.FindEntityType(typeof(Content));
 
-        // Assert
         entityType.Should().NotBeNull();
-        
-        // Check primary key
+
         var primaryKey = entityType!.FindPrimaryKey();
         primaryKey.Should().NotBeNull();
         primaryKey!.Properties.Should().HaveCount(1);
         primaryKey.Properties[0].Name.Should().Be("Id");
 
-        // Check required properties
         var titleProperty = entityType.FindProperty("Title");
         titleProperty.Should().NotBeNull();
         titleProperty!.IsNullable.Should().BeFalse();
@@ -60,21 +57,18 @@ public class ContentDbContextTests : IDisposable
     [Fact]
     public void ContentEntity_ShouldHaveCorrectIndexes()
     {
-        // Arrange
+
         var entityType = _context.Model.FindEntityType(typeof(Content));
 
-        // Assert
         entityType.Should().NotBeNull();
-        
+
         var indexes = entityType!.GetIndexes().ToList();
         indexes.Should().NotBeEmpty();
 
-        // Check unique slug index
         var slugIndex = indexes.FirstOrDefault(i => i.Properties.Any(p => p.Name == "Slug"));
         slugIndex.Should().NotBeNull();
         slugIndex!.IsUnique.Should().BeTrue();
 
-        // Check other indexes exist
         var authorIdIndex = indexes.FirstOrDefault(i => i.Properties.Any(p => p.Name == "AuthorId"));
         authorIdIndex.Should().NotBeNull();
 
@@ -85,10 +79,9 @@ public class ContentDbContextTests : IDisposable
     [Fact]
     public void ContentEntity_ShouldHaveDefaultValues()
     {
-        // Arrange
+
         var entityType = _context.Model.FindEntityType(typeof(Content));
 
-        // Assert
         entityType.Should().NotBeNull();
 
         var isDeletedProperty = entityType!.FindProperty("IsDeleted");
@@ -111,12 +104,11 @@ public class ContentDbContextTests : IDisposable
     [Fact]
     public void ContentEntity_ShouldHaveQueryFilterForSoftDelete()
     {
-        // Arrange
+
         var entityType = _context.Model.FindEntityType(typeof(Content));
 
-        // Assert
         entityType.Should().NotBeNull();
-        
+
         var queryFilter = entityType!.GetQueryFilter();
         queryFilter.Should().NotBeNull();
     }
@@ -124,7 +116,7 @@ public class ContentDbContextTests : IDisposable
     [Fact]
     public async Task ContentDbContext_ShouldApplySoftDeleteFilter()
     {
-        // Arrange
+
         var content1 = new Content
         {
             Id = Guid.NewGuid(),
@@ -154,10 +146,8 @@ public class ContentDbContextTests : IDisposable
         _context.Contents.AddRange(content1, content2);
         await _context.SaveChangesAsync();
 
-        // Act
         var activeContents = await _context.Contents.ToListAsync();
 
-        // Assert
         activeContents.Should().HaveCount(1);
         activeContents[0].Id.Should().Be(content1.Id);
     }
@@ -165,7 +155,7 @@ public class ContentDbContextTests : IDisposable
     [Fact]
     public async Task ContentDbContext_InMemoryDatabase_AllowsDuplicateSlugs()
     {
-        // Arrange
+
         var content1 = new Content
         {
             Id = Guid.NewGuid(),
@@ -181,9 +171,9 @@ public class ContentDbContextTests : IDisposable
         var content2 = new Content
         {
             Id = Guid.NewGuid(),
-            Title = "Test Content 2", 
+            Title = "Test Content 2",
             Body = "Test body 2",
-            Slug = "duplicate-slug", // Same slug
+            Slug = "duplicate-slug",
             AuthorId = Guid.NewGuid(),
             Status = ContentStatus.Draft,
             Type = ContentType.Article,
@@ -195,12 +185,9 @@ public class ContentDbContextTests : IDisposable
 
         _context.Contents.Add(content2);
 
-        // Act & Assert
-        // In-memory database doesn't enforce unique constraints like real database
-        // This test verifies that in-memory database allows duplicate slugs
         var saveResult = await _context.SaveChangesAsync();
         saveResult.Should().BeGreaterThan(0);
-        
+
         var contentsWithSameSlug = await _context.Contents
             .Where(c => c.Slug == "duplicate-slug")
             .CountAsync();
@@ -210,20 +197,17 @@ public class ContentDbContextTests : IDisposable
     [Fact]
     public void ContentEntity_ShouldHaveProperConfiguration()
     {
-        // Arrange
+
         var entityType = _context.Model.FindEntityType(typeof(Content));
 
-        // Assert
         entityType.Should().NotBeNull();
 
         var statusProperty = entityType!.FindProperty("Status");
         statusProperty.Should().NotBeNull();
-        
+
         var typeProperty = entityType.FindProperty("Type");
         typeProperty.Should().NotBeNull();
-        
-        // In-memory database doesn't support all EF Core features
-        // This test validates basic property configuration instead of converters
+
         statusProperty!.ClrType.Should().Be(typeof(ContentStatus));
         typeProperty!.ClrType.Should().Be(typeof(ContentType));
     }

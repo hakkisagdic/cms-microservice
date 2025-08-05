@@ -11,7 +11,7 @@ public class AuthenticationResult
     public UserResponse? User { get; set; }
     public List<string> Errors { get; set; } = new();
     public string? Message { get; set; }
-    
+
     public static AuthenticationResult Success(string accessToken, string refreshToken, DateTime expiresAt, UserResponse user)
     {
         return new AuthenticationResult
@@ -23,7 +23,7 @@ public class AuthenticationResult
             User = user
         };
     }
-    
+
     public static AuthenticationResult Failure(string error)
     {
         return new AuthenticationResult
@@ -32,7 +32,7 @@ public class AuthenticationResult
             Errors = new List<string> { error }
         };
     }
-    
+
     public static AuthenticationResult Failure(List<string> errors)
     {
         return new AuthenticationResult

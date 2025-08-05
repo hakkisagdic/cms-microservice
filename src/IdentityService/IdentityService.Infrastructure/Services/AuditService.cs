@@ -34,7 +34,7 @@ public class AuditService : IAuditService
         await _auditLogRepository.SaveChangesAsync();
     }
 
-    public async Task LogLoginAttemptAsync(string userId, string userEmail, bool isSuccess, 
+    public async Task LogLoginAttemptAsync(string userId, string userEmail, bool isSuccess,
                                           string ipAddress, string? userAgent = null, string? errorMessage = null)
     {
         var request = new AuditLogRequest
@@ -68,7 +68,7 @@ public class AuditService : IAuditService
         await LogAsync(request);
     }
 
-    public async Task LogRegistrationAsync(string userId, string userEmail, bool isSuccess, 
+    public async Task LogRegistrationAsync(string userId, string userEmail, bool isSuccess,
                                           string ipAddress, string? userAgent = null, string? errorMessage = null)
     {
         var request = new AuditLogRequest
@@ -86,7 +86,7 @@ public class AuditService : IAuditService
         await LogAsync(request);
     }
 
-    public async Task LogPasswordChangeAsync(string userId, string userEmail, bool isSuccess, 
+    public async Task LogPasswordChangeAsync(string userId, string userEmail, bool isSuccess,
                                            string ipAddress, string? userAgent = null, string? errorMessage = null)
     {
         var request = new AuditLogRequest
@@ -104,7 +104,7 @@ public class AuditService : IAuditService
         await LogAsync(request);
     }
 
-    public async Task LogProfileUpdateAsync(string userId, string userEmail, bool isSuccess, 
+    public async Task LogProfileUpdateAsync(string userId, string userEmail, bool isSuccess,
                                           string ipAddress, string? userAgent = null, string? errorMessage = null)
     {
         var request = new AuditLogRequest

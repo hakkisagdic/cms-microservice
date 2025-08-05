@@ -45,10 +45,9 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         var entity = await GetByIdAsync(id, cancellationToken);
         if (entity == null) return false;
 
-        // Soft delete
         entity.IsDeleted = true;
         entity.DeletedAt = DateTime.UtcNow;
-        
+
         await UpdateAsync(entity, cancellationToken);
         return true;
     }

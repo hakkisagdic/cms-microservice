@@ -16,10 +16,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Database Configuration - test PostgreSQL connection first
+
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         var useInMemory = ShouldUseInMemoryDatabase(connectionString);
-        
+
         if (useInMemory)
         {
             Console.WriteLine("Using in-memory database for IdentityService");
@@ -34,10 +34,9 @@ public static class DependencyInjection
                     b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
         }
 
-        // Identity Configuration
         services.AddIdentityCore<ApplicationUser>(options =>
         {
-            // Password settings
+
             options.Password.RequireDigit = true;
             options.Password.RequireLowercase = true;
             options.Password.RequireNonAlphanumeric = true;
@@ -45,12 +44,10 @@ public static class DependencyInjection
             options.Password.RequiredLength = 8;
             options.Password.RequiredUniqueChars = 1;
 
-            // Lockout settings
             options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             options.Lockout.MaxFailedAccessAttempts = 5;
             options.Lockout.AllowedForNewUsers = true;
 
-            // User settings
             options.User.AllowedUserNameCharacters =
                 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
             options.User.RequireUniqueEmail = true;
@@ -58,15 +55,12 @@ public static class DependencyInjection
         .AddRoles<IdentityRole>()
         .AddEntityFrameworkStores<ApplicationDbContext>();
 
-        // Repository Registration
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 
-        // Service Registration
         services.AddScoped<IAuditService, AuditService>();
 
-        // JWT Service Registration with configuration
         services.AddScoped<IJwtService>(provider =>
         {
             var jwtSettings = configuration.GetSection("JwtSettings");
@@ -74,9 +68,9 @@ public static class DependencyInjection
             var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JWT Issuer is required");
             var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JWT Audience is required");
             var keyId = jwtSettings["KeyId"] ?? "cms-key-1";
-            
+
             Console.WriteLine($"Identity Service JWT Settings - KeyId: {keyId}, Secret Length: {secret.Length}, Issuer: {issuer}, Audience: {audience}");
-            
+
             return new JwtService(
                 secret: secret,
                 issuer: issuer,

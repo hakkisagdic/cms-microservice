@@ -22,7 +22,7 @@ public class CreateContentDtoValidatorTests
     [InlineData(null)]
     public void Should_Have_Error_When_Title_Is_Empty_Or_Null(string title)
     {
-        // Arrange
+
         var dto = new CreateContentDto(
             title,
             "Valid body content",
@@ -40,7 +40,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.Title);
     }
@@ -51,7 +50,7 @@ public class CreateContentDtoValidatorTests
     [InlineData(null)]
     public void Should_Have_Error_When_Body_Is_Empty_Or_Null(string body)
     {
-        // Arrange
+
         var dto = new CreateContentDto(
             "Valid Title",
             body,
@@ -69,7 +68,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.Body);
     }
@@ -77,7 +75,7 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_Title_Is_Too_Long()
     {
-        // Arrange
+
         var longTitle = new string('a', 201);
         var dto = new CreateContentDto(
             longTitle,
@@ -96,7 +94,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.Title);
     }
@@ -104,7 +101,7 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_Body_Is_Too_Long()
     {
-        // Arrange
+
         var longBody = new string('a', 10001);
         var dto = new CreateContentDto(
             "Test Title",
@@ -123,7 +120,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.Body);
     }
@@ -131,7 +127,7 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_Summary_Is_Too_Long()
     {
-        // Arrange
+
         var longSummary = new string('a', 501);
         var dto = new CreateContentDto(
             "Test Title",
@@ -150,7 +146,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.Summary);
     }
@@ -158,7 +153,7 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_AuthorId_Is_Empty()
     {
-        // Arrange
+
         var dto = new CreateContentDto(
             "Test Title",
             "Content body",
@@ -176,15 +171,14 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.AuthorId);
     }
 
-    [Fact] 
+    [Fact]
     public void Should_Have_Error_When_Slug_Exceeds_Maximum_Length()
     {
-        // Arrange
+
         var dto = new CreateContentDto(
             "Test Title",
             "Content body",
@@ -196,13 +190,12 @@ public class CreateContentDtoValidatorTests
             null,
             null,
             Guid.NewGuid(),
-            new string('a', 201), // Exceeds 200 character limit
+            new string('a', 201),
             0,
             false,
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.Slug);
     }
@@ -210,7 +203,7 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_SortOrder_Is_Negative()
     {
-        // Arrange
+
         var dto = new CreateContentDto(
             "Test Title",
             "Content body",
@@ -228,7 +221,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.SortOrder);
     }
@@ -236,7 +228,7 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Not_Have_Error_When_All_Fields_Are_Valid()
     {
-        // Arrange
+
         var dto = new CreateContentDto(
             "Test Title",
             "Content body with sufficient length",
@@ -254,7 +246,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -262,7 +253,7 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Not_Have_Error_When_Optional_Fields_Are_Null()
     {
-        // Arrange
+
         var dto = new CreateContentDto(
             "Test Title",
             "Content body",
@@ -280,7 +271,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -291,7 +281,7 @@ public class CreateContentDtoValidatorTests
     [InlineData("123-valid-slug")]
     public void Should_Not_Have_Error_When_Slug_Format_Is_Valid(string slug)
     {
-        // Arrange
+
         var dto = new CreateContentDto(
             "Test Title",
             "Content body",
@@ -309,7 +299,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldNotHaveValidationErrorFor(x => x.Slug);
     }
@@ -320,7 +309,7 @@ public class CreateContentDtoValidatorTests
     [InlineData(ContentType.BlogPost)]
     public void Should_Not_Have_Error_When_ContentType_Is_Valid(ContentType type)
     {
-        // Arrange
+
         var dto = new CreateContentDto(
             "Test Title",
             "Content body",
@@ -338,7 +327,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldNotHaveValidationErrorFor(x => x.Type);
     }
@@ -346,11 +334,11 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Not_Have_Error_When_Summary_Is_Null()
     {
-        // Arrange
+
         var dto = new CreateContentDto(
             "Valid Title",
             "Valid body content",
-            null, // Summary is null, which is allowed
+            null,
             ContentType.Article,
             null,
             null,
@@ -364,7 +352,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldNotHaveValidationErrorFor(x => x.Summary);
     }
@@ -372,8 +359,8 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_MetaTitle_Exceeds_Maximum_Length()
     {
-        // Arrange
-        var longMetaTitle = new string('a', 101); // Exceeds 100 character limit
+
+        var longMetaTitle = new string('a', 101);
         var dto = new CreateContentDto(
             "Valid Title",
             "Valid body content",
@@ -391,7 +378,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.MetaTitle);
     }
@@ -399,8 +385,8 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_MetaDescription_Exceeds_Maximum_Length()
     {
-        // Arrange
-        var longMetaDescription = new string('a', 301); // Exceeds 300 character limit
+
+        var longMetaDescription = new string('a', 301);
         var dto = new CreateContentDto(
             "Valid Title",
             "Valid body content",
@@ -418,7 +404,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.MetaDescription);
     }
@@ -426,8 +411,8 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_Tags_Exceeds_Maximum_Length()
     {
-        // Arrange
-        var longTags = new string('a', 501); // Exceeds 500 character limit
+
+        var longTags = new string('a', 501);
         var dto = new CreateContentDto(
             "Valid Title",
             "Valid body content",
@@ -445,7 +430,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.Tags);
     }
@@ -453,8 +437,8 @@ public class CreateContentDtoValidatorTests
     [Fact]
     public void Should_Have_Error_When_Category_Exceeds_Maximum_Length()
     {
-        // Arrange
-        var longCategory = new string('a', 101); // Exceeds 100 character limit
+
+        var longCategory = new string('a', 101);
         var dto = new CreateContentDto(
             "Valid Title",
             "Valid body content",
@@ -472,7 +456,6 @@ public class CreateContentDtoValidatorTests
             true
         );
 
-        // Act & Assert
         var result = _validator.TestValidate(dto);
         result.ShouldHaveValidationErrorFor(x => x.Category);
     }

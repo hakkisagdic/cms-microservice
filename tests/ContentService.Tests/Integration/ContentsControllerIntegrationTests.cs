@@ -12,6 +12,7 @@ using ContentService.Core.DTOs;
 using ContentService.Core.Entities;
 using ContentService.Core.Features.Contents.Commands;
 using ContentService.Core.Features.Contents.Queries;
+using ContentService.Tests.Helpers;
 using Xunit;
 
 namespace ContentService.Tests.Integration;
@@ -25,30 +26,34 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
     public ContentsControllerIntegrationTests(WebApplicationFactory<Program> factory)
     {
         _mockMediator = new Mock<IMediator>();
-        
+
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureServices(services =>
             {
-                // Remove existing MediatR registration
+
                 var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMediator));
                 if (descriptor != null)
                 {
                     services.Remove(descriptor);
                 }
 
-                // Add mock MediatR
                 services.AddSingleton(_mockMediator.Object);
             });
         });
 
         _client = _factory.CreateClient();
+        
+        // Add JWT token to all requests
+        var token = TestJwtTokenHelper.GenerateTestToken();
+        _client.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
     }
 
     [Fact]
     public async Task GetAllContents_ShouldReturnOkResult_WhenContentsExist()
     {
-        // Arrange
+
         var contents = new List<ContentDto>
         {
             new ContentDto(
@@ -103,18 +108,16 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
             .Setup(x => x.Send(It.IsAny<GetAllContentsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<IEnumerable<ContentDto>>.Success(contents));
 
-        // Act
         var response = await _client.GetAsync("/api/contents");
 
-        // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
-        
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ContentDto[]>(jsonString, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        
+
         result.Should().NotBeNull();
         result!.Length.Should().Be(2);
         result[0].Title.Should().Be("Test Content 1");
@@ -124,22 +127,20 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
     [Fact]
     public async Task GetAllContents_ShouldReturnBadRequest_WhenServiceFails()
     {
-        // Arrange
+
         _mockMediator
             .Setup(x => x.Send(It.IsAny<GetAllContentsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<IEnumerable<ContentDto>>.Failure("Service error"));
 
-        // Act
         var response = await _client.GetAsync("/api/contents");
 
-        // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task GetContentById_ShouldReturnOkResult_WhenContentExists()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var content = new ContentDto(
             contentId,
@@ -169,18 +170,16 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
             .Setup(x => x.Send(It.Is<GetContentByIdQuery>(q => q.Id == contentId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<ContentDto?>.Success(content));
 
-        // Act
         var response = await _client.GetAsync($"/api/contents/{contentId}");
 
-        // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
-        
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ContentDto>(jsonString, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        
+
         result.Should().NotBeNull();
         result!.Id.Should().Be(contentId);
         result.Title.Should().Be("Test Content");
@@ -189,24 +188,22 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
     [Fact]
     public async Task GetContentById_ShouldReturnNotFound_WhenContentDoesNotExist()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
-        
+
         _mockMediator
             .Setup(x => x.Send(It.Is<GetContentByIdQuery>(q => q.Id == contentId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<ContentDto?>.Failure("Content not found"));
 
-        // Act
         var response = await _client.GetAsync($"/api/contents/{contentId}");
 
-        // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task CreateContent_ShouldReturnCreated_WhenValidRequest()
     {
-        // Arrange
+
         var createDto = new CreateContentDto(
             "New Content",
             "New content body",
@@ -258,18 +255,16 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
         });
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        // Act
         var response = await _client.PostAsync("/api/contents", content);
 
-        // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
-        
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ContentDto>(jsonString, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        
+
         result.Should().NotBeNull();
         result!.Title.Should().Be("New Content");
         result.Status.Should().Be(ContentStatus.Draft);
@@ -278,7 +273,7 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
     [Fact]
     public async Task CreateContent_ShouldReturnBadRequest_WhenCreationFails()
     {
-        // Arrange
+
         var createDto = new CreateContentDto(
             "New Content",
             "New content body",
@@ -306,17 +301,15 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
         });
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        // Act
         var response = await _client.PostAsync("/api/contents", content);
 
-        // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task UpdateContent_ShouldReturnOk_WhenValidRequest()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var updateDto = new UpdateContentDto(
             "Updated Content",
@@ -369,18 +362,16 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
         });
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        // Act
         var response = await _client.PutAsync($"/api/contents/{contentId}", content);
 
-        // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
-        
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ContentDto>(jsonString, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        
+
         result.Should().NotBeNull();
         result!.Title.Should().Be("Updated Content");
         result.Type.Should().Be(ContentType.Page);
@@ -389,41 +380,37 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
     [Fact]
     public async Task DeleteContent_ShouldReturnNoContent_WhenContentExists()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
-        
+
         _mockMediator
             .Setup(x => x.Send(It.Is<DeleteContentCommand>(c => c.Id == contentId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
 
-        // Act
         var response = await _client.DeleteAsync($"/api/contents/{contentId}");
 
-        // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
     }
 
     [Fact]
     public async Task DeleteContent_ShouldReturnNotFound_WhenContentDoesNotExist()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
-        
+
         _mockMediator
             .Setup(x => x.Send(It.Is<DeleteContentCommand>(c => c.Id == contentId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure("Content not found"));
 
-        // Act
         var response = await _client.DeleteAsync($"/api/contents/{contentId}");
 
-        // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task PublishContent_ShouldReturnOk_WhenValidRequest()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var publishDto = new PublishContentDto(DateTime.UtcNow.AddHours(1));
 
@@ -461,18 +448,16 @@ public class ContentsControllerIntegrationTests : IClassFixture<WebApplicationFa
         });
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        // Act
         var response = await _client.PostAsync($"/api/contents/{contentId}/publish", content);
 
-        // Assert
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
-        
+
         var jsonString = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ContentDto>(jsonString, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        
+
         result.Should().NotBeNull();
         result!.Status.Should().Be(ContentStatus.Published);
         result.PublishedAt.Should().NotBeNull();

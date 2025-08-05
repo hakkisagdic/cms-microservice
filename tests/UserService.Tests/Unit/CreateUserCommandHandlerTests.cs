@@ -22,7 +22,7 @@ public class CreateUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldCreateUser_WhenValidRequest()
     {
-        // Arrange
+
         var createUserDto = new CreateUserDto(
             "John",
             "Doe",
@@ -59,10 +59,8 @@ public class CreateUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedUser);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.FirstName.Should().Be(createUserDto.FirstName);
@@ -77,7 +75,7 @@ public class CreateUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldFail_WhenEmailAlreadyExists()
     {
-        // Arrange
+
         var createUserDto = new CreateUserDto(
             "John",
             "Doe",
@@ -95,10 +93,8 @@ public class CreateUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.EmailExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be("A user with this email already exists.");
 
@@ -109,7 +105,7 @@ public class CreateUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldCreateUserWithMinimalData_WhenOptionalFieldsAreNull()
     {
-        // Arrange
+
         var createUserDto = new CreateUserDto(
             "Jane",
             "Smith",
@@ -140,10 +136,8 @@ public class CreateUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedUser);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.FirstName.Should().Be(createUserDto.FirstName);
@@ -161,7 +155,7 @@ public class CreateUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldFail_WhenRepositoryThrowsException()
     {
-        // Arrange
+
         var createUserDto = new CreateUserDto(
             "John",
             "Doe",
@@ -182,7 +176,6 @@ public class CreateUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database connection failed"));
 
-        // Act & Assert
         await FluentActions.Invoking(() => _handler.Handle(command, CancellationToken.None))
             .Should().ThrowAsync<Exception>()
             .WithMessage("Database connection failed");
@@ -191,7 +184,7 @@ public class CreateUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldFail_WhenEmailCheckThrowsException()
     {
-        // Arrange
+
         var createUserDto = new CreateUserDto(
             "John",
             "Doe",
@@ -209,7 +202,6 @@ public class CreateUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.EmailExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Email validation failed"));
 
-        // Act & Assert
         await FluentActions.Invoking(() => _handler.Handle(command, CancellationToken.None))
             .Should().ThrowAsync<Exception>()
             .WithMessage("Email validation failed");

@@ -16,9 +16,9 @@ public class Result<T>
     }
 
     public static Result<T> Success(T value) => new(true, value, string.Empty, new List<string>());
-    
+
     public static Result<T> Failure(string error) => new(false, default, error, new List<string> { error });
-    
+
     public static Result<T> Failure(List<string> errors) => new(false, default, string.Join(", ", errors), errors);
 }
 
@@ -36,8 +36,8 @@ public class Result
     }
 
     public static Result Success() => new(true, string.Empty, new List<string>());
-    
+
     public static Result Failure(string error) => new(false, error, new List<string> { error });
-    
+
     public static Result Failure(List<string> errors) => new(false, string.Join(", ", errors), errors);
 }

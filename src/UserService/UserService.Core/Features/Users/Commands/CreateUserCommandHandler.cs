@@ -17,7 +17,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
 
     public async Task<Result<UserDto>> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
-        // Check if email already exists
+
         if (await _userRepository.EmailExistsAsync(request.User.Email, cancellationToken))
         {
             return Result<UserDto>.Failure("A user with this email already exists.");

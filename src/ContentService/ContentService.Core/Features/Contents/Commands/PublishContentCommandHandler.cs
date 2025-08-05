@@ -23,7 +23,6 @@ public class PublishContentCommandHandler : IRequestHandler<PublishContentComman
             return Result<ContentDto>.Failure("Content not found.");
         }
 
-        // Update publish-related properties
         content.Status = ContentStatus.Published;
         content.PublishedAt = request.PublishData.PublishAt ?? DateTime.UtcNow;
         content.UpdatedAt = DateTime.UtcNow;

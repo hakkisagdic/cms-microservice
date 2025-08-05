@@ -17,7 +17,7 @@ public class GetAllContentsQueryHandler : IRequestHandler<GetAllContentsQuery, R
     public async Task<Result<IEnumerable<ContentDto>>> Handle(GetAllContentsQuery request, CancellationToken cancellationToken)
     {
         var contents = await _contentRepository.GetAllAsync(cancellationToken);
-        
+
         var contentDtos = contents.Select(content => new ContentDto(
             content.Id,
             content.Title,

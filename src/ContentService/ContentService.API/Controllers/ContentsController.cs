@@ -10,7 +10,7 @@ namespace ContentService.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-[Authorize] // JWT Authentication required for all endpoints
+[Authorize]
 public class ContentsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -34,7 +34,7 @@ public class ContentsController : ControllerBase
         try
         {
             var result = await _mediator.Send(new GetAllContentsQuery(), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return Ok(result.Value);
@@ -63,7 +63,7 @@ public class ContentsController : ControllerBase
         try
         {
             var result = await _mediator.Send(new GetContentByIdQuery(id), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return Ok(result.Value);
@@ -92,12 +92,12 @@ public class ContentsController : ControllerBase
         try
         {
             var result = await _mediator.Send(new CreateContentCommand(createContentDto), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return CreatedAtAction(
-                    nameof(GetContentById), 
-                    new { id = result.Value!.Id }, 
+                    nameof(GetContentById),
+                    new { id = result.Value!.Id },
                     result.Value);
             }
 
@@ -126,7 +126,7 @@ public class ContentsController : ControllerBase
         try
         {
             var result = await _mediator.Send(new UpdateContentCommand(id, updateContentDto), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return Ok(result.Value);
@@ -155,7 +155,7 @@ public class ContentsController : ControllerBase
         try
         {
             var result = await _mediator.Send(new DeleteContentCommand(id), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return NoContent();
@@ -186,7 +186,7 @@ public class ContentsController : ControllerBase
         try
         {
             var result = await _mediator.Send(new PublishContentCommand(id, publishDto), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return Ok(result.Value);

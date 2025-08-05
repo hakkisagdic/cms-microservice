@@ -39,12 +39,11 @@ public class JwtService : IJwtService
             new(JwtRegisteredClaimNames.Jti, jwtId),
             new(JwtRegisteredClaimNames.Sub, userId),
             new(JwtRegisteredClaimNames.Email, email),
-            new(JwtRegisteredClaimNames.Iat, 
-                new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString(), 
+            new(JwtRegisteredClaimNames.Iat,
+                new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString(),
                 ClaimValueTypes.Integer64)
         };
 
-        // Add roles as claims
         foreach (var role in roles)
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
@@ -57,7 +56,7 @@ public class JwtService : IJwtService
             Issuer = _issuer,
             Audience = _audience,
             SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key) { KeyId = _keyId }, 
+                new SymmetricSecurityKey(key) { KeyId = _keyId },
                 SecurityAlgorithms.HmacSha256Signature)
         };
 
@@ -88,7 +87,7 @@ public class JwtService : IJwtService
                 ValidIssuer = _issuer,
                 ValidateAudience = true,
                 ValidAudience = _audience,
-                ValidateLifetime = false, // We don't validate lifetime here
+                ValidateLifetime = false,
                 ClockSkew = TimeSpan.Zero
             }, out SecurityToken validatedToken);
 

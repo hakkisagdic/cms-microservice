@@ -21,7 +21,7 @@ public class DeleteContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldDeleteContent_WhenContentExists()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var existingContent = new Content
         {
@@ -43,10 +43,8 @@ public class DeleteContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.DeleteAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
 
         _mockContentRepository.Verify(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()), Times.Once);
@@ -56,17 +54,15 @@ public class DeleteContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldFail_WhenContentDoesNotExist()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var command = new DeleteContentCommand(contentId);
 
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Content?)null);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be("Content not found.");
 
@@ -77,14 +73,13 @@ public class DeleteContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryFails()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var command = new DeleteContentCommand(contentId);
 
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
 
-        // Act & Assert
         await Assert.ThrowsAsync<Exception>(async () =>
             await _handler.Handle(command, CancellationToken.None));
 
@@ -94,7 +89,7 @@ public class DeleteContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldDeletePublishedContent_WhenContentIsPublished()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var publishedContent = new Content
         {
@@ -117,10 +112,8 @@ public class DeleteContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.DeleteAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
 
         _mockContentRepository.Verify(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()), Times.Once);
@@ -130,7 +123,7 @@ public class DeleteContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldDeleteArchivedContent_WhenContentIsArchived()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var archivedContent = new Content
         {
@@ -152,10 +145,8 @@ public class DeleteContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.DeleteAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
 
         _mockContentRepository.Verify(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()), Times.Once);

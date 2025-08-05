@@ -1,8 +1,10 @@
 using System.Text.Json;
 using ContentService.Core.DTOs;
 using ContentService.Core.Interfaces;
+using ContentService.Infrastructure.Resilience;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Polly;
 
 namespace ContentService.Infrastructure.Services;
 
@@ -11,12 +13,14 @@ public class UserServiceClient : IUserServiceClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<UserServiceClient> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAsyncPolicy<HttpResponseMessage> _resilientPolicy;
 
     public UserServiceClient(HttpClient httpClient, ILogger<UserServiceClient> logger, IHttpContextAccessor httpContextAccessor)
     {
         _httpClient = httpClient;
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
+        _resilientPolicy = PollyPolicies.GetCombinedPolicy();
     }
 
     private void SetAuthorizationHeader()
@@ -34,8 +38,12 @@ public class UserServiceClient : IUserServiceClient
         try
         {
             SetAuthorizationHeader();
-            var response = await _httpClient.GetAsync($"api/Users/{userId}", cancellationToken);
-            
+
+            var response = await _resilientPolicy.ExecuteAsync(async () =>
+            {
+                return await _httpClient.GetAsync($"api/Users/{userId}", cancellationToken);
+            });
+
             if (response.IsSuccessStatusCode)
             {
                 var jsonString = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -45,12 +53,12 @@ public class UserServiceClient : IUserServiceClient
                 });
                 return user;
             }
-            
+
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 return null;
             }
-            
+
             _logger.LogWarning("Failed to get user {UserId}. Status: {StatusCode}", userId, response.StatusCode);
             return null;
         }
@@ -66,7 +74,12 @@ public class UserServiceClient : IUserServiceClient
         try
         {
             SetAuthorizationHeader();
-            var response = await _httpClient.GetAsync($"api/Users/{userId}", cancellationToken);
+
+            var response = await _resilientPolicy.ExecuteAsync(async () =>
+            {
+                return await _httpClient.GetAsync($"api/Users/{userId}", cancellationToken);
+            });
+
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)

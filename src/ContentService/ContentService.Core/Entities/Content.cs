@@ -10,16 +10,14 @@ public class Content : BaseEntity
     public string? FeaturedImageUrl { get; set; }
     public string? MetaTitle { get; set; }
     public string? MetaDescription { get; set; }
-    public string? Tags { get; set; } // Comma-separated tags
+    public string? Tags { get; set; }
     public string? Category { get; set; }
     public int ViewCount { get; set; } = 0;
     public DateTime? PublishedAt { get; set; }
-    
-    // Author information - will be retrieved from User Service
+
     public Guid AuthorId { get; set; }
-    public string AuthorName { get; set; } = string.Empty; // Cached for performance
-    
-    // SEO and Content Management
+    public string AuthorName { get; set; } = string.Empty;
+
     public string? Slug { get; set; }
     public int SortOrder { get; set; } = 0;
     public bool IsFeatured { get; set; } = false;

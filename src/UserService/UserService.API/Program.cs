@@ -12,7 +12,6 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
@@ -21,19 +20,17 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() { 
-        Title = "User Service API", 
+    c.SwaggerDoc("v1", new() {
+        Title = "User Service API",
         Version = "v1",
         Description = "A microservice for managing users in the CMS system",
         Contact = new() { Name = "CMS Team" }
     });
-    
-    // Include XML comments for better API documentation
+
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
@@ -42,19 +39,14 @@ builder.Services.AddSwaggerGen(c =>
     }
 });
 
-// Add MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateUserCommand).Assembly));
 
-// Add FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<CreateUserDtoValidator>();
 
-// Add validation behavior
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(UserService.Core.Behaviors.ValidationBehavior<,>));
 
-// Add Infrastructure services
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -65,10 +57,8 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add Health Checks
 builder.Services.AddHealthChecks();
 
-// Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is required");
 var keyId = jwtSettings["KeyId"] ?? "cms-key-1";
@@ -90,7 +80,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 Encoding.ASCII.GetBytes(secretKey)) { KeyId = keyId },
             ClockSkew = TimeSpan.Zero
         };
-        
+
         options.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = context =>
@@ -105,14 +95,13 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger(c =>
     {
         c.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
         {
-            // Add CORS headers to swagger.json response
+
             if (!httpReq.HttpContext.Response.Headers.ContainsKey("Access-Control-Allow-Origin"))
             {
                 httpReq.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
@@ -122,7 +111,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "User Service API V1");
-        c.RoutePrefix = "swagger"; // Set Swagger UI at /swagger
+        c.RoutePrefix = "swagger";
     });
 }
 
@@ -133,12 +122,10 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-// Ensure database is created
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<UserService.Infrastructure.Data.UserDbContext>();
-    
-    // Only call EnsureCreatedAsync for in-memory databases
+
     if (context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
     {
         await context.Database.EnsureCreatedAsync();
@@ -159,7 +146,7 @@ finally
     await Log.CloseAndFlushAsync();
 }
 
-public partial class Program 
-{ 
+public partial class Program
+{
     protected Program() { }
 }

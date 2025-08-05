@@ -22,7 +22,7 @@ public class UpdateContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldUpdateContent_WhenContentExists()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var existingContent = new Content
         {
@@ -63,10 +63,8 @@ public class UpdateContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.UpdateAsync(It.IsAny<Content>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Content content, CancellationToken ct) => content);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Title.Should().Be("Updated Title");
@@ -82,7 +80,7 @@ public class UpdateContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldFail_WhenContentDoesNotExist()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var updateDto = new UpdateContentDto(
             "Updated Title",
@@ -106,10 +104,8 @@ public class UpdateContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Content?)null);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be("Content not found.");
 
@@ -120,7 +116,7 @@ public class UpdateContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryFails()
     {
-        // Arrange
+
         var contentId = Guid.NewGuid();
         var updateDto = new UpdateContentDto(
             "Updated Title",
@@ -144,7 +140,6 @@ public class UpdateContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.GetByIdAsync(contentId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
 
-        // Act & Assert
         await Assert.ThrowsAsync<Exception>(async () =>
             await _handler.Handle(command, CancellationToken.None));
 

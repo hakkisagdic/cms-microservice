@@ -91,7 +91,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> GetUsers([FromQuery] int skip = 0, [FromQuery] int take = 50)
     {
         if (take > 100)
-            take = 100; // Limit to prevent abuse
+            take = 100;
 
         var users = await _userService.GetUsersAsync(skip, take);
         return Ok(users);

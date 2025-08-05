@@ -19,24 +19,21 @@ public class CreateContentCommandHandler : IRequestHandler<CreateContentCommand,
 
     public async Task<Result<ContentDto>> Handle(CreateContentCommand request, CancellationToken cancellationToken)
     {
-        // Verify author exists
+
         var authorExists = await _userServiceClient.UserExistsAsync(request.Content.AuthorId, cancellationToken);
         if (!authorExists)
         {
             return Result<ContentDto>.Failure("Author not found.");
         }
 
-        // Get author details for caching
         var author = await _userServiceClient.GetUserByIdAsync(request.Content.AuthorId, cancellationToken);
         if (author == null)
         {
             return Result<ContentDto>.Failure("Unable to retrieve author information.");
         }
 
-        // Generate slug if not provided
         var slug = request.Content.Slug ?? GenerateSlug(request.Content.Title);
-        
-        // Check if slug already exists
+
         if (await _contentRepository.SlugExistsAsync(slug, cancellationToken))
         {
             slug = await GenerateUniqueSlug(slug, cancellationToken);
@@ -84,13 +81,13 @@ public class CreateContentCommandHandler : IRequestHandler<CreateContentCommand,
     {
         var counter = 1;
         var uniqueSlug = $"{baseSlug}-{counter}";
-        
+
         while (await _contentRepository.SlugExistsAsync(uniqueSlug, cancellationToken))
         {
             counter++;
             uniqueSlug = $"{baseSlug}-{counter}";
         }
-        
+
         return uniqueSlug;
     }
 

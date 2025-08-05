@@ -23,7 +23,6 @@ public class UpdateContentCommandHandler : IRequestHandler<UpdateContentCommand,
             return Result<ContentDto>.Failure("Content not found.");
         }
 
-        // Update properties
         existingContent.Title = request.Content.Title;
         existingContent.Body = request.Content.Body;
         existingContent.Summary = request.Content.Summary;

@@ -121,8 +121,6 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        // In a real application, you would get the user ID from the JWT token
-        // For now, we'll assume it's passed in the request
         var userId = GetUserIdFromToken();
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();

@@ -17,7 +17,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(builder);
 
-        // Configure ApplicationUser
         builder.Entity<ApplicationUser>(entity =>
         {
             entity.Property(e => e.FirstName)
@@ -41,7 +40,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .IsUnique();
         });
 
-        // Configure RefreshToken
         builder.Entity<RefreshToken>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -79,7 +77,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Configure AuditLog
         builder.Entity<AuditLog>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -116,7 +113,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
-        // Rename ASP.NET Core Identity tables to remove AspNet prefix
         builder.Entity<ApplicationUser>().ToTable("Users");
         builder.Entity<Microsoft.AspNetCore.Identity.IdentityRole>().ToTable("Roles");
         builder.Entity<Microsoft.AspNetCore.Identity.IdentityUserRole<string>>().ToTable("UserRoles");

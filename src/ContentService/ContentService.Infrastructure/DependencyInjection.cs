@@ -5,6 +5,7 @@ using ContentService.Core.Interfaces;
 using ContentService.Infrastructure.Data;
 using ContentService.Infrastructure.Repositories;
 using ContentService.Infrastructure.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ContentService.Infrastructure;
 
@@ -12,10 +13,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Database configuration - test PostgreSQL connection first
+
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         var useInMemory = ShouldUseInMemoryDatabase(connectionString);
-        
+
         if (useInMemory)
         {
             Console.WriteLine("Using in-memory database for ContentService");
@@ -29,10 +30,11 @@ public static class DependencyInjection
                 options.UseNpgsql(connectionString));
         }
 
-        // Repository registration
         services.AddScoped<IContentRepository, ContentRepository>();
-        
-        // External service clients
+
+        // HttpContextAccessor'ı kaydet
+        services.AddHttpContextAccessor();
+
         services.AddHttpClient<IUserServiceClient, UserServiceClient>(client =>
         {
             var userServiceUrl = configuration["Services:UserService:BaseUrl"] ?? "http://localhost:5001";
@@ -51,12 +53,12 @@ public static class DependencyInjection
         {
             using var connection = new Npgsql.NpgsqlConnection(connectionString);
             connection.Open();
-            return false; // PostgreSQL connection successful
+            return false;
         }
         catch (Exception)
         {
-            // Suppress the exception to avoid log noise
-            return true; // Use in-memory if PostgreSQL connection fails
+
+            return true;
         }
     }
 }

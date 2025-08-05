@@ -34,7 +34,7 @@ public class UserRepository : Repository<User>, IUserRepository
         }
 
         searchTerm = searchTerm.ToLower();
-        
+
         return await _dbSet
             .Where(u => u.FirstName.ToLower().Contains(searchTerm) ||
                        u.LastName.ToLower().Contains(searchTerm) ||

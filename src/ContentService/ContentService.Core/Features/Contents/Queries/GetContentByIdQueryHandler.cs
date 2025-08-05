@@ -17,7 +17,7 @@ public class GetContentByIdQueryHandler : IRequestHandler<GetContentByIdQuery, R
     public async Task<Result<ContentDto?>> Handle(GetContentByIdQuery request, CancellationToken cancellationToken)
     {
         var content = await _contentRepository.GetByIdAsync(request.Id, cancellationToken);
-        
+
         if (content == null)
         {
             return Result<ContentDto?>.Failure("Content not found.");

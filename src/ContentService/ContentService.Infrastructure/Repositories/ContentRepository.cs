@@ -46,7 +46,7 @@ public class ContentRepository : Repository<Content>, IContentRepository
         }
 
         searchTerm = searchTerm.ToLower();
-        
+
         return await _dbSet
             .Where(c => c.Title.ToLower().Contains(searchTerm) ||
                        c.Body.ToLower().Contains(searchTerm) ||

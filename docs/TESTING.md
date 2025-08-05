@@ -57,6 +57,23 @@ Bu dokümant, CMS Mikroservis projesinin test stratejisi, test yazma standartlar
 
 ```
 tests/
+├── IdentityService.Tests/
+│   ├── Application/
+│   │   ├── Services/
+│   │   │   ├── AuthenticationServiceTests.cs
+│   │   │   └── UserServiceTests.cs
+│   │   └── Validators/
+│   │       ├── LoginRequestValidatorTests.cs
+│   │       └── RegisterRequestValidatorTests.cs
+│   ├── Infrastructure/
+│   │   ├── Services/
+│   │   │   ├── JwtServiceTests.cs
+│   │   │   └── AuditServiceTests.cs
+│   │   └── Repositories/
+│   │       └── RefreshTokenRepositoryTests.cs
+│   └── API/
+│       └── Controllers/
+│           └── AuthControllerTests.cs
 ├── UserService.Tests/
 │   ├── Core/
 │   │   ├── Commands/
@@ -78,6 +95,206 @@ tests/
 ```
 
 ### Sample Unit Tests
+
+#### Identity Service - Authentication Service Test
+
+```csharp
+// IdentityService.Tests/Application/Services/AuthenticationServiceTests.cs
+using FluentAssertions;
+using Microsoft.AspNetCore.Identity;
+using Moq;
+using IdentityService.Application.Services;
+using IdentityService.Core.DTOs.Authentication;
+using IdentityService.Core.Entities;
+using IdentityService.Infrastructure.Services.Interfaces;
+using IdentityService.Infrastructure.Repositories.Interfaces;
+using Xunit;
+
+namespace IdentityService.Tests.Application.Services
+{
+    public class AuthenticationServiceTests
+    {
+        private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
+        private readonly Mock<IJwtService> _jwtServiceMock;
+        private readonly Mock<IRefreshTokenRepository> _refreshTokenRepositoryMock;
+        private readonly Mock<IAuditService> _auditServiceMock;
+        private readonly AuthenticationService _service;
+
+        public AuthenticationServiceTests()
+        {
+            _userManagerMock = MockUserManager<ApplicationUser>();
+            _jwtServiceMock = new Mock<IJwtService>();
+            _refreshTokenRepositoryMock = new Mock<IRefreshTokenRepository>();
+            _auditServiceMock = new Mock<IAuditService>();
+            
+            _service = new AuthenticationService(
+                _userManagerMock.Object,
+                _jwtServiceMock.Object,
+                _refreshTokenRepositoryMock.Object,
+                _auditServiceMock.Object);
+        }
+
+        [Fact]
+        public async Task LoginAsync_WithValidCredentials_ShouldReturnSuccessResult()
+        {
+            // Arrange
+            var request = new LoginRequest
+            {
+                Email = "test@example.com",
+                Password = "SecurePassword123!"
+            };
+
+            var user = new ApplicationUser
+            {
+                Id = "user-123",
+                Email = request.Email,
+                FirstName = "John",
+                LastName = "Doe",
+                Status = UserStatus.Active
+            };
+
+            var expectedToken = "jwt-token-here";
+            var expectedRefreshToken = "refresh-token-here";
+
+            _userManagerMock.Setup(x => x.FindByEmailAsync(request.Email))
+                .ReturnsAsync(user);
+            _userManagerMock.Setup(x => x.CheckPasswordAsync(user, request.Password))
+                .ReturnsAsync(true);
+            _userManagerMock.Setup(x => x.GetRolesAsync(user))
+                .ReturnsAsync(new List<string> { "User" });
+            _jwtServiceMock.Setup(x => x.GenerateJwtToken(It.IsAny<string>(), It.IsAny<string>(), 
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IList<string>>()))
+                .Returns(expectedToken);
+            _jwtServiceMock.Setup(x => x.GenerateRefreshToken())
+                .Returns(expectedRefreshToken);
+            _jwtServiceMock.Setup(x => x.GetJwtIdFromToken(expectedToken))
+                .Returns("jwt-id");
+
+            // Act
+            var result = await _service.LoginAsync(request, "127.0.0.1", "TestAgent");
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            result.AccessToken.Should().Be(expectedToken);
+            result.RefreshToken.Should().Be(expectedRefreshToken);
+            result.User.Should().NotBeNull();
+            result.User.Email.Should().Be(request.Email);
+
+            _auditServiceMock.Verify(x => x.LogLoginAttemptAsync(
+                user.Id, user.Email, true, "127.0.0.1", "TestAgent", null), Times.Once);
+        }
+
+        [Fact]
+        public async Task LoginAsync_WithInvalidCredentials_ShouldReturnFailureResult()
+        {
+            // Arrange
+            var request = new LoginRequest
+            {
+                Email = "test@example.com",
+                Password = "WrongPassword"
+            };
+
+            _userManagerMock.Setup(x => x.FindByEmailAsync(request.Email))
+                .ReturnsAsync((ApplicationUser)null);
+
+            // Act
+            var result = await _service.LoginAsync(request, "127.0.0.1", "TestAgent");
+
+            // Assert
+            result.IsSuccess.Should().BeFalse();
+            result.Errors.Should().Contain("Invalid email or password");
+            result.AccessToken.Should().BeNull();
+            result.RefreshToken.Should().BeNull();
+        }
+
+        private static Mock<UserManager<TUser>> MockUserManager<TUser>() where TUser : class
+        {
+            var store = new Mock<IUserStore<TUser>>();
+            return new Mock<UserManager<TUser>>(store.Object, null, null, null, null, null, null, null, null);
+        }
+    }
+}
+```
+
+#### Identity Service - JWT Service Test
+
+```csharp
+// IdentityService.Tests/Infrastructure/Services/JwtServiceTests.cs
+using FluentAssertions;
+using IdentityService.Infrastructure.Services;
+using System.IdentityModel.Tokens.Jwt;
+using Xunit;
+
+namespace IdentityService.Tests.Infrastructure.Services
+{
+    public class JwtServiceTests
+    {
+        private readonly JwtService _jwtService;
+        private const string TestSecret = "ThisIsATestSecretKeyThatIsAtLeast32Characters";
+        private const string TestIssuer = "TestIssuer";
+        private const string TestAudience = "TestAudience";
+        private const string TestKeyId = "test-key-1";
+
+        public JwtServiceTests()
+        {
+            _jwtService = new JwtService(TestSecret, TestIssuer, TestAudience, 60, TestKeyId);
+        }
+
+        [Fact]
+        public void GenerateJwtToken_ShouldReturnValidToken()
+        {
+            // Arrange
+            var userId = "user-123";
+            var email = "test@example.com";
+            var firstName = "John";
+            var lastName = "Doe";
+            var roles = new List<string> { "User", "Admin" };
+
+            // Act
+            var token = _jwtService.GenerateJwtToken(userId, email, firstName, lastName, roles);
+
+            // Assert
+            token.Should().NotBeNullOrEmpty();
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jsonToken = tokenHandler.ReadJwtToken(token);
+
+            jsonToken.Claims.FirstOrDefault(x => x.Type == "sub")?.Value.Should().Be(userId);
+            jsonToken.Claims.FirstOrDefault(x => x.Type == "email")?.Value.Should().Be(email);
+            jsonToken.Issuer.Should().Be(TestIssuer);
+            jsonToken.Audiences.Should().Contain(TestAudience);
+            jsonToken.Header.Kid.Should().Be(TestKeyId);
+        }
+
+        [Fact] 
+        public void GenerateRefreshToken_ShouldReturnUniqueTokens()
+        {
+            // Act
+            var token1 = _jwtService.GenerateRefreshToken();
+            var token2 = _jwtService.GenerateRefreshToken();
+
+            // Assert
+            token1.Should().NotBeNullOrEmpty();
+            token2.Should().NotBeNullOrEmpty();
+            token1.Should().NotBe(token2);
+        }
+
+        [Fact]
+        public void IsTokenExpired_WithExpiredToken_ShouldReturnTrue()
+        {
+            // Arrange
+            var expiredJwtService = new JwtService(TestSecret, TestIssuer, TestAudience, -1, TestKeyId);
+            var token = expiredJwtService.GenerateJwtToken("user-123", "test@example.com", "John", "Doe", new List<string>());
+
+            // Act
+            var isExpired = _jwtService.IsTokenExpired(token);
+
+            // Assert
+            isExpired.Should().BeTrue();
+        }
+    }
+}
+```
 
 #### Command Handler Test
 

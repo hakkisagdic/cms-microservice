@@ -15,38 +15,37 @@ public class UserDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // User entity configuration
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             entity.Property(e => e.FirstName)
                 .IsRequired()
                 .HasMaxLength(50);
-                
+
             entity.Property(e => e.LastName)
                 .IsRequired()
                 .HasMaxLength(50);
-                
+
             entity.Property(e => e.Email)
                 .IsRequired()
                 .HasMaxLength(100);
-                
+
             entity.HasIndex(e => e.Email)
                 .IsUnique();
-                
+
             entity.Property(e => e.PhoneNumber)
                 .HasMaxLength(20);
-                
+
             entity.Property(e => e.ProfileImageUrl)
                 .HasMaxLength(500);
-                
+
             entity.Property(e => e.Bio)
                 .HasMaxLength(500);
-                
+
             entity.Property(e => e.Department)
                 .HasMaxLength(100);
-                
+
             entity.Property(e => e.Position)
                 .HasMaxLength(100);
 
@@ -59,7 +58,6 @@ public class UserDbContext : DbContext
             entity.Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 
-            // Global query filter for soft delete
             entity.HasQueryFilter(e => !e.IsDeleted);
         });
     }

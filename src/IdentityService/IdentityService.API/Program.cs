@@ -9,28 +9,24 @@ using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 
 builder.Host.UseSerilog();
 
-// Add services to the container
 builder.Services.AddControllers();
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "Identity Service API", 
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Identity Service API",
         Version = "v1",
         Description = "Authentication and user management service for CMS microservices"
     });
-    
-    // Add JWT authentication to Swagger
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -56,7 +52,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is required");
 
@@ -82,7 +77,6 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -93,11 +87,9 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Register application and infrastructure services
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Add health checks
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var healthChecksBuilder = builder.Services.AddHealthChecks();
 
@@ -111,21 +103,20 @@ if (!string.IsNullOrEmpty(connectionString))
     }
     catch
     {
-        // If PostgreSQL is not available, just add basic health check
+
         Console.WriteLine("PostgreSQL not available, skipping database health check");
     }
 }
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger(c =>
     {
         c.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
         {
-            // Add CORS headers to swagger.json response
+
             if (!httpReq.HttpContext.Response.Headers.ContainsKey("Access-Control-Allow-Origin"))
             {
                 httpReq.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
@@ -135,7 +126,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity Service API v1");
-        c.RoutePrefix = string.Empty; // Serve Swagger UI at root
+        c.RoutePrefix = string.Empty;
     });
 }
 
@@ -148,7 +139,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Health check endpoint
 app.MapHealthChecks("/health");
 
 try

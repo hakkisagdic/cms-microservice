@@ -26,7 +26,7 @@ public class CreateContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldCreateContent_WhenValidRequestAndAuthorExists()
     {
-        // Arrange
+
         var authorId = Guid.NewGuid();
         var createContentDto = new CreateContentDto(
             "Test Article",
@@ -81,10 +81,8 @@ public class CreateContentCommandHandlerTests
         _mockContentRepository.Setup(x => x.AddAsync(It.IsAny<Content>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedContent);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Title.Should().Be(createContentDto.Title);
@@ -103,7 +101,7 @@ public class CreateContentCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldFail_WhenAuthorDoesNotExist()
     {
-        // Arrange
+
         var authorId = Guid.NewGuid();
         var createContentDto = new CreateContentDto(
             "Test Article",
@@ -127,10 +125,8 @@ public class CreateContentCommandHandlerTests
         _mockUserService.Setup(x => x.UserExistsAsync(authorId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be("Author not found.");
 

@@ -17,7 +17,6 @@ public class AuditLog
     public bool IsSuccessful { get; set; } = true;
     public string? ErrorMessage { get; set; }
     public string? AdditionalData { get; set; }
-    
-    // Navigation property
+
     public virtual ApplicationUser? User { get; set; }
 }

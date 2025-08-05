@@ -16,27 +16,31 @@
 ## 🏗️ Mimari Genel Bakış
 
 ### Mikroservis Mimarisi
-Bu CMS projesi, domain-driven design prensipleriyle ayrılmış iki ana mikroservisten ve bunları yöneten bir API Gateway'den oluşmaktadır:
+Bu CMS projesi, domain-driven design prensipleriyle ayrılmış üç ana mikroservisten ve bunları yöneten bir API Gateway'den oluşmaktadır:
 
 ```
                           ┌─────────────────┐
                           │   API Gateway   │
                           │    (Port 5000)  │
+                          │   JWT Auth &    │
+                          │    Routing      │
                           └─────────────────┘
                                   │
-                  ┌───────────────┴───────────────┐
-                  │                               │
-                  ▼                               ▼
-┌─────────────────────┐                 ┌─────────────────────┐
-│   Content Service   │◄───────────────►│    User Service     │
-│     (Port 5002)     │                 │     (Port 5001)     │
-└─────────────────────┘                 └─────────────────────┘
-          │                                       │
-          ▼                                       ▼
-┌─────────────────────┐                 ┌─────────────────────┐
-│  ContentServiceDb   │                 │   UserServiceDb     │
-│    (PostgreSQL)     │                 │    (PostgreSQL)     │
-└─────────────────────┘                 └─────────────────────┘
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+              ▼                   ▼                   ▼
+┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
+│  Identity Service   │ │   Content Service   │ │    User Service     │
+│    (Port 5128)      │ │     (Port 5002)     │ │     (Port 5001)     │
+│   Authentication    │ │   Content Mgmt      │ │   Profile Mgmt      │
+│   & User Identity   │ │                     │◄│                     │
+└─────────────────────┘ └─────────────────────┘ └─────────────────────┘
+          │                       │                       │
+          ▼                       ▼                       ▼
+┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
+│ IdentityServiceDb   │ │  ContentServiceDb   │ │   UserServiceDb     │
+│    (PostgreSQL)     │ │    (PostgreSQL)     │ │    (PostgreSQL)     │
+└─────────────────────┘ └─────────────────────┘ └─────────────────────┘
 ```
 
 ### Clean Architecture Katmanları
@@ -74,11 +78,12 @@ Her mikroservis aşağıdaki katmanlardan oluşmaktadır:
 ## 🛠️ Teknoloji Stack
 
 ### Backend Framework
-- **.NET 9**: Modern web framework ve en son performans iyileştirmeleri
-- **ASP.NET Core 9**: Web API framework
-- **Entity Framework Core 9**: Gelişmiş sorgulama özellikleriyle ORM
+- **.NET 8 LTS**: Modern web framework ve performans iyileştirmeleri
+- **ASP.NET Core 8**: Web API framework
+- **Entity Framework Core 8**: ORM ve veritabanı yönetimi
 - **YARP 2.3.0**: .NET için hafif, yüksek performanslı reverse proxy API Gateway
-- **AspNetCoreRateLimit**: IP-tabanlı hız sınırlama
+- **ASP.NET Core Identity**: Kullanıcı kimlik yönetimi ve authentication
+- **JWT Bearer Authentication**: JSON Web Token tabanlı kimlik doğrulama
 
 ### Database
 - **PostgreSQL 15**: Primary database for both services
@@ -195,42 +200,38 @@ API Gateway, CMS Mikroservis mimarisinin ön kapısı olarak işlev görür. Tü
                   ▼
 ┌───────────────────────────────────────┐
 │          API Gateway (YARP)           │
+│ - JWT Authentication                  │
 │ - Routing                             │
-│ - Rate Limiting                       │
-│ - Circuit Breaker                     │
+│ - Authorization                       │
 │ - Logging & Correlation IDs           │
 │ - Swagger Aggregation                 │
 │ - Health Monitoring                   │
 └───────────────────────────────────────┘
                   │
-        ┌─────────┴─────────┐
-        │                   │
-        ▼                   ▼
-┌───────────────┐   ┌───────────────┐
-│ User Service  │   │Content Service │
-└───────────────┘   └───────────────┘
+        ┌─────────┼─────────┐
+        │         │         │
+        ▼         ▼         ▼
+┌─────────────┐ ┌───────────┐ ┌─────────────┐
+│Identity     │ │User       │ │Content      │
+│Service      │ │Service    │ │Service      │
+└─────────────┘ └───────────┘ └─────────────┘
 ```
 
 ### Özellikler
 
+#### JWT Authentication & Authorization
+- **Bearer Token Validation**: JWT token doğrulama ve yetkilendirme
+- **KeyId Support**: Token'larda KeyId kullanımı ile güvenlik artırımı
+- **Symmetric Key Validation**: HMAC-SHA256 algoritması ile token imzalama
+- **Claims-Based Authorization**: Token içerisindeki claims ile yetkilendirme
+- **Token Expiration Handling**: Token süresi dolumu kontrolü
+
 #### Reverse Proxy Routing
 - **YARP (Yet Another Reverse Proxy)**: Microsoft'un hafif ve esnek reverse proxy kütüphanesi
 - **JSON-Based Configuration**: `appsettings.json` içerisinde yapılandırılmış rotalar
-- **Path-Based Routing**: `/api/users/*` ve `/api/contents/*` path'lerine göre yönlendirme
-- **Request Transformation**: İstek üstbilgilerinin eklenmesi ve değiştirilmesi
+- **Path-Based Routing**: `/api/auth/*`, `/api/users/*` ve `/api/contents/*` path'lerine göre yönlendirme
+- **Request Transformation**: JWT token'larının downstream servislere iletilmesi
 - **Load Balancing**: Round-robin algoritması ile yük dengeleme (scale-out desteği)
-
-#### Rate Limiting
-- **IP-Based Rate Limiting**: `AspNetCoreRateLimit` kütüphanesi ile IP-tabanlı hız sınırlandırma
-- **Configurable Rules**: Çeşitli endpoint'ler için özelleştirilebilir limitler
-- **Multiple Time Windows**: Dakika ve saat bazlı limit ayarları (1m, 1h)
-- **Async Processing**: Asenkron kilitleme stratejisi ile yüksek verimlilik
-
-#### Circuit Breaker
-- **Polly Integration**: Polly kütüphanesi ile dayanıklılık desenleri
-- **Configurable Thresholds**: Ayarlanabilir başarısızlık eşikleri
-- **Automatic Recovery**: Belirli bir süre sonra otomatik devre sıfırlama
-- **Retry Policies**: Geçici hatalar için yeniden deneme mekanizması
 
 #### Advanced Logging
 - **Serilog Integration**: Yapılandırılmış loglama
@@ -291,19 +292,93 @@ API Gateway, `appsettings.json` dosyasında detaylı olarak yapılandırılabili
 
 ## 🔧 Servis Detayları
 
+### Identity Service
+
+**Sorumluluklar:**
+- Kullanıcı kimlik doğrulama (authentication)
+- JWT token oluşturma ve doğrulama
+- Kullanıcı kayıt ve giriş işlemleri
+- Refresh token yönetimi
+- Kullanıcı yetkilendirme (authorization)
+- Audit logging
+
+**Key Features:**
+- ASP.NET Core Identity integration
+- JWT token generation with KeyId
+- Refresh token mechanism
+- Role-based authentication
+- Audit trail tracking
+- Password security policies
+- Account lockout policies
+
+**Database Schema:**
+```sql
+-- ASP.NET Core Identity Tables
+CREATE TABLE AspNetUsers (
+    Id VARCHAR(450) PRIMARY KEY,
+    UserName VARCHAR(256),
+    NormalizedUserName VARCHAR(256),
+    Email VARCHAR(256),
+    NormalizedEmail VARCHAR(256),
+    EmailConfirmed BOOLEAN,
+    PasswordHash TEXT,
+    SecurityStamp TEXT,
+    ConcurrencyStamp TEXT,
+    PhoneNumber TEXT,
+    PhoneNumberConfirmed BOOLEAN,
+    TwoFactorEnabled BOOLEAN,
+    LockoutEnd TIMESTAMP,
+    LockoutEnabled BOOLEAN,
+    AccessFailedCount INTEGER,
+    FirstName VARCHAR(100),
+    LastName VARCHAR(100),
+    ProfileImageUrl VARCHAR(500),
+    Status INTEGER,
+    CreatedAt TIMESTAMP,
+    UpdatedAt TIMESTAMP,
+    LastLoginAt TIMESTAMP
+);
+
+CREATE TABLE RefreshTokens (
+    Id UUID PRIMARY KEY,
+    Token VARCHAR(500) NOT NULL,
+    JwtId VARCHAR(500) NOT NULL,
+    UserId VARCHAR(450) NOT NULL,
+    CreatedAt TIMESTAMP NOT NULL,
+    ExpiryDate TIMESTAMP NOT NULL,
+    IsRevoked BOOLEAN DEFAULT FALSE,
+    IpAddress VARCHAR(45),
+    UserAgent VARCHAR(500)
+);
+
+CREATE TABLE AuditLogs (
+    Id UUID PRIMARY KEY,
+    UserId VARCHAR(450),
+    UserEmail VARCHAR(256),
+    Action INTEGER NOT NULL,
+    Resource VARCHAR(100),
+    IsSuccessful BOOLEAN,
+    IpAddress VARCHAR(45),
+    UserAgent VARCHAR(500),
+    ErrorMessage TEXT,
+    Timestamp TIMESTAMP NOT NULL
+);
+```
+
 ### User Service
 
 **Sorumluluklar:**
-- Kullanıcı yaşam döngüsü yönetimi
-- Kullanıcı kimlik doğrulama bilgileri
-- Profil yönetimi
-- Kullanıcı durumu takibi
+- Kullanıcı profil yönetimi
+- Kullanıcı bilgilerini detaylı olarak alma
+- Kullanıcı durumu yönetimi
+- Profil güncelleme işlemleri
 
 **Key Features:**
-- Email uniqueness validation
+- User profile management
 - User status management (Active, Inactive, Suspended, Pending)
-- Soft delete implementation
-- Search functionality
+- JWT Authorization protected endpoints
+- Integration with Identity Service
+- User search and filtering
 
 **Database Schema:**
 ```sql

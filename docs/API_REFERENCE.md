@@ -5,15 +5,17 @@ Bu dokümant, CMS Mikroservis API'lerinin detaylı kullanım kılavuzudur.
 ## 📋 İçindekiler
 1. [Genel Bilgiler](#genel-bilgiler)
 2. [API Gateway](#api-gateway)
-3. [User Service API](#user-service-api)
-4. [Content Service API](#content-service-api)
-5. [Hata Kodları](#hata-kodları)
-6. [Örnek Kullanım Senaryoları](#örnek-kullanım-senaryoları)
+3. [Identity Service API](#identity-service-api)
+4. [User Service API](#user-service-api)
+5. [Content Service API](#content-service-api)
+6. [Hata Kodları](#hata-kodları)
+7. [Örnek Kullanım Senaryoları](#örnek-kullanım-senaryoları)
 
 ## 🌐 Genel Bilgiler
 
 ### Base URLs
 - **API Gateway**: `http://localhost:5000` (Development)
+- **Identity Service**: `http://localhost:5128` (Direct Access - Development)
 - **User Service**: `http://localhost:5001` (Direct Access - Development)
 - **Content Service**: `http://localhost:5002` (Direct Access - Development)
 
@@ -21,7 +23,11 @@ Bu dokümant, CMS Mikroservis API'lerinin detaylı kullanım kılavuzudur.
 Tüm API istekleri ve yanıtları `application/json` formatındadır.
 
 ### Authentication
-Şu anda authentication implementasyonu yoktur, ancak gelecekte JWT Bearer token implementasyonu planlanmaktadır.
+Bu sistem JWT Bearer Authentication kullanır. Korumalı endpointlere erişim için:
+
+1. **Register/Login**: Identity Service üzerinden kullanıcı kaydı ve giriş
+2. **Token Alma**: Login işlemi sonrası JWT token alınır  
+3. **API Kullanımı**: `Authorization: Bearer {token}` header'ı ile protected endpoints'e erişim
 
 ### Response Format
 Tüm API responses standart Result pattern kullanır:
@@ -124,6 +130,7 @@ Gateway üzerinden tüm mikroservislerin Swagger dökümantasyonlarına erişim.
 
 **Microservices Swagger Endpoints:**
 - API Gateway: `/swagger/v1/swagger.json`
+- Identity Service: `/proxy/identity/swagger/v1/swagger.json`
 - User Service: `/proxy/userservice/swagger/v1/swagger.json`
 - Content Service: `/proxy/contentservice/swagger/v1/swagger.json`
 
@@ -158,7 +165,172 @@ Tüm Content Service endpointlerine API Gateway üzerinden erişim.
 - DELETE `/api/contents/{id}` - İçerik sil
 - POST `/api/contents/{id}/publish` - İçerik yayınla
 
-## 👤 User Service API
+---
+
+### Identity Service Proxy
+
+Tüm Identity Service endpointlerine API Gateway üzerinden erişim.
+
+**Base URL:** `/api/auth`
+
+**Örnekler:**
+- POST `/api/auth/register` - Kullanıcı kaydı
+- POST `/api/auth/login` - Kullanıcı girişi
+- GET `/api/test/public` - Public test endpoint
+- GET `/api/test/protected` - Protected test endpoint (JWT gerekli)
+
+---
+
+## � Identity Service API
+
+### Base URL: `/api/auth`
+
+Identity Service, kullanıcı kimlik doğrulama ve yetkilendirme işlemlerini yönetir.
+
+---
+
+### POST `/api/auth/register`
+
+Yeni kullanıcı kaydı oluşturur.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!",
+  "confirmPassword": "SecurePassword123!",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+```
+
+**Response (Success):**
+```json
+{
+  "message": "User registered successfully",
+  "user": {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "status": "Active",
+    "createdAt": "2025-08-05T10:30:00Z"
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK`: Başarılı kayıt
+- `400 Bad Request`: Geçersiz veri veya email zaten kullanımda
+
+---
+
+### POST `/api/auth/login`
+
+Kullanıcı giriş işlemi yapar ve JWT token döner.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!"
+}
+```
+
+**Response (Success):**
+```json
+{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "abc123def456...",
+  "user": {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "status": "Active",
+    "lastLoginAt": "2025-08-05T10:35:00Z"
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK`: Başarılı giriş
+- `400 Bad Request`: Geçersiz email/şifre
+
+---
+
+### POST `/api/auth/refresh-token`
+
+Refresh token kullanarak yeni JWT token alır.
+
+**Request Body:**
+```json
+{
+  "refreshToken": "abc123def456..."
+}
+```
+
+**Response (Success):**
+```json
+{
+  "message": "Token refreshed successfully",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "def789ghi012..."
+}
+```
+
+**Status Codes:**
+- `200 OK`: Token yenilendi
+- `400 Bad Request`: Geçersiz refresh token
+
+---
+
+### GET `/api/test/public`
+
+Public test endpoint (authentication gerektirmez).
+
+**Response:**
+```json
+{
+  "message": "This is a public endpoint",
+  "timestamp": "2025-08-05T10:30:00Z"
+}
+```
+
+**Status Codes:**
+- `200 OK`: Başarılı
+
+---
+
+### GET `/api/test/protected`
+
+Protected test endpoint (JWT authentication gerektirir).
+
+**Headers:**
+```
+Authorization: Bearer {jwt-token}
+```
+
+**Response:**
+```json
+{
+  "message": "This is a protected endpoint",
+  "user": {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "email": "user@example.com"
+  },
+  "timestamp": "2025-08-05T10:30:00Z"
+}
+```
+
+**Status Codes:**
+- `200 OK`: Başarılı
+- `401 Unauthorized`: Geçersiz veya eksik token
+
+---
+
+## �👤 User Service API
 
 ### Base URL: `/api/users`
 

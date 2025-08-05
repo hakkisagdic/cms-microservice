@@ -10,7 +10,7 @@ namespace UserService.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-[Authorize] // JWT Authentication required for all endpoints
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -34,7 +34,7 @@ public class UsersController : ControllerBase
         try
         {
             var result = await _mediator.Send(new GetAllUsersQuery(), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return Ok(result.Value);
@@ -63,7 +63,7 @@ public class UsersController : ControllerBase
         try
         {
             var result = await _mediator.Send(new GetUserByIdQuery(id), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return Ok(result.Value);
@@ -92,12 +92,12 @@ public class UsersController : ControllerBase
         try
         {
             var result = await _mediator.Send(new CreateUserCommand(createUserDto), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return CreatedAtAction(
-                    nameof(GetUserById), 
-                    new { id = result.Value!.Id }, 
+                    nameof(GetUserById),
+                    new { id = result.Value!.Id },
                     result.Value);
             }
 
@@ -131,13 +131,12 @@ public class UsersController : ControllerBase
         try
         {
             var result = await _mediator.Send(new UpdateUserCommand(id, updateUserDto), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return Ok(result.Value);
             }
 
-            // Check if it's a "not found" error
             if (result.Error == "User not found.")
             {
                 return NotFound(result.Error);
@@ -171,7 +170,7 @@ public class UsersController : ControllerBase
         try
         {
             var result = await _mediator.Send(new DeleteUserCommand(id), cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 return NoContent();

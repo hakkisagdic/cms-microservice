@@ -22,7 +22,6 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Resul
             return Result<UserDto>.Failure("User not found.");
         }
 
-        // Check if email is being changed and if the new email already exists
         if (existingUser.Email != request.User.Email && await _userRepository.EmailExistsAsync(request.User.Email, cancellationToken))
         {
             return Result<UserDto>.Failure("A user with this email already exists.");

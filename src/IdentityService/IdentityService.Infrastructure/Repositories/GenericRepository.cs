@@ -45,7 +45,7 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
         if (expression == null)
             return await _dbSet.CountAsync();
-        
+
         return await _dbSet.CountAsync(expression);
     }
 

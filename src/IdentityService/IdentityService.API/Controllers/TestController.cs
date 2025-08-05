@@ -21,8 +21,8 @@ public class TestController : ControllerBase
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var email = User.FindFirst(ClaimTypes.Email)?.Value;
         var name = User.FindFirst(ClaimTypes.GivenName)?.Value;
-        
-        return Ok(new { 
+
+        return Ok(new {
             message = "This is a protected endpoint",
             userId = userId,
             email = email,

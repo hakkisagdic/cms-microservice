@@ -13,10 +13,9 @@ public class ApplicationUser : IdentityUser
     public DateTime? LastLoginAt { get; set; }
     public UserStatus Status { get; set; } = UserStatus.Active;
     public override DateTimeOffset? LockoutEnd { get; set; }
-    
-    // Navigation properties
+
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
-    
+
     public string FullName => $"{FirstName} {LastName}".Trim();
 }

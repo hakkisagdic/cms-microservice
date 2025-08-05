@@ -21,7 +21,7 @@ public class DeleteUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldDeleteUser_WhenUserExists()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var existingUser = new User
         {
@@ -41,10 +41,8 @@ public class DeleteUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.DeleteAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
 
         _mockUserRepository.Verify(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
@@ -54,17 +52,15 @@ public class DeleteUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldFail_WhenUserDoesNotExist()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var command = new DeleteUserCommand(userId);
 
         _mockUserRepository.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be("User not found.");
 
@@ -75,7 +71,7 @@ public class DeleteUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldFail_WhenDeleteOperationFails()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var existingUser = new User
         {
@@ -95,10 +91,8 @@ public class DeleteUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.DeleteAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be("Failed to delete user.");
 
@@ -109,14 +103,13 @@ public class DeleteUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryGetThrowsException()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var command = new DeleteUserCommand(userId);
 
         _mockUserRepository.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database connection failed"));
 
-        // Act & Assert
         await FluentActions.Invoking(() => _handler.Handle(command, CancellationToken.None))
             .Should().ThrowAsync<Exception>()
             .WithMessage("Database connection failed");
@@ -125,7 +118,7 @@ public class DeleteUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowException_WhenRepositoryDeleteThrowsException()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var existingUser = new User
         {
@@ -145,7 +138,6 @@ public class DeleteUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.DeleteAsync(userId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Delete operation failed"));
 
-        // Act & Assert
         await FluentActions.Invoking(() => _handler.Handle(command, CancellationToken.None))
             .Should().ThrowAsync<Exception>()
             .WithMessage("Delete operation failed");
@@ -154,7 +146,7 @@ public class DeleteUserCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldDeleteInactiveUser_WhenUserIsInactive()
     {
-        // Arrange
+
         var userId = Guid.NewGuid();
         var existingUser = new User
         {
@@ -174,10 +166,8 @@ public class DeleteUserCommandHandlerTests
         _mockUserRepository.Setup(x => x.DeleteAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
 
         _mockUserRepository.Verify(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
