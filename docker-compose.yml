@@ -29,25 +29,18 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=IdentityServiceDb;Username=postgres;Password=postgres
-      - JwtSettings__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForProduction
-      - JwtSettings__Issuer=CMS-ApiGateway
-      - JwtSettings__Audience=CMS-Services
+      - JwtSettings__Secret=MySecret123456789012345678901234567890
+      - JwtSettings__Issuer=IdentityService
+      - JwtSettings__Audience=CMSMicroservices
       - JwtSettings__ExpiryMinutes=60
+      - JwtSettings__KeyId=cms-key-1
     ports:
       - "5128:5128"
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - cms_network
     restart: unless-stopped
     volumes:
       - app_logs:/app/logs
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5128/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # API Gateway
   apigateway:
@@ -60,26 +53,18 @@ services:
       - ServiceUrls__IdentityService=http://identityservice:5128
       - ServiceUrls__UserService=http://userservice:5001
       - ServiceUrls__ContentService=http://contentservice:5002
-      - JwtSettings__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForProduction
-      - JwtSettings__Issuer=CMS-ApiGateway
-      - JwtSettings__Audience=CMS-Services
+      - JwtSettings__Secret=MySecret123456789012345678901234567890
+      - JwtSettings__Issuer=IdentityService
+      - JwtSettings__Audience=CMSMicroservices
       - JwtSettings__ExpiryMinutes=60
+      - JwtSettings__KeyId=cms-key-1
     ports:
-      - "5000:5000"
-    depends_on:
-      - identityservice
-      - userservice
-      - contentservice
+      - "5050:5000"
     networks:
       - cms_network
     restart: unless-stopped
     volumes:
       - app_logs:/app/logs
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # User Service
   userservice:
@@ -90,25 +75,18 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=UserServiceDb;Username=postgres;Password=postgres
-      - JwtSettings__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForProduction
-      - JwtSettings__Issuer=CMS-ApiGateway
-      - JwtSettings__Audience=CMS-Services
+      - JwtSettings__Secret=MySecret123456789012345678901234567890
+      - JwtSettings__Issuer=IdentityService
+      - JwtSettings__Audience=CMSMicroservices
       - JwtSettings__ExpiryMinutes=60
+      - JwtSettings__KeyId=cms-key-1
     ports:
       - "5001:5001"
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - cms_network
     restart: unless-stopped
     volumes:
       - app_logs:/app/logs
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Content Service
   contentservice:
@@ -120,27 +98,18 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=ContentServiceDb;Username=postgres;Password=postgres
       - Services__UserService__BaseUrl=http://userservice:5001
-      - JwtSettings__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForProduction
-      - JwtSettings__Issuer=CMS-ApiGateway
-      - JwtSettings__Audience=CMS-Services
+      - JwtSettings__Secret=MySecret123456789012345678901234567890
+      - JwtSettings__Issuer=IdentityService
+      - JwtSettings__Audience=CMSMicroservices
       - JwtSettings__ExpiryMinutes=60
+      - JwtSettings__KeyId=cms-key-1
     ports:
       - "5002:5002"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      userservice:
-        condition: service_healthy
     networks:
       - cms_network
     restart: unless-stopped
     volumes:
       - app_logs:/app/logs
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # pgAdmin (Optional - for database management)
   pgadmin:
